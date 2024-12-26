@@ -1,42 +1,71 @@
-
-export type OperatorEnum = "LIKE" | "ILIKE" | ">" | "<" | ">=" | "<=" | "=" | "IN" | "BETWEEN"
+export type OperatorEnum =
+  | "LIKE"
+  | "ILIKE"
+  | ">"
+  | "<"
+  | ">="
+  | "<="
+  | "="
+  | "IN"
+  | "BETWEEN";
 export class BaseQueryData {
   readonly page: number = 1;
   readonly limit: number = 10;
 }
 
-
-export type ResultFilter = {
-  total: number,
-  limit: number,
-  currentPage: number,
-  items: []
-}
+export type ResultFilter<T> = {
+  total: number;
+  limit: number | null;
+  currentPage: number;
+  items: T[];
+};
 
 export type SortOptions = "ASC" | "DESC";
 
+export type AdapterType = "typeorm" | "sequelize";
+
 export type QueryData = BaseQueryData & Record<string, any>;
 
-export type BeforeEachConditionHook = (data: BeforeEachConditionDto) => BeforeEachConditionDto;
-export type BeforeEachConditionDto = {
-  keyword: string,
-  params: object,
-  sqlString: string
+export type DataInputFormatted = {
+  value: any;
+  columnName: string;
 };
 
-export type FilterBuilderConfigHooks = {
-  beforeEachCondition?: BeforeEachConditionHook[],
-  genColumnNameHook?: GenColumnNameHook
-}
+export type BeforeEachConditionHook = (
+  data: BeforeEachConditionDto
+) => BeforeEachConditionDto;
+export type BeforeEachConditionDto = {
+  params: ParamsOperator;
+  operator: OperatorEnum;
+  columName: string;
+};
 
-export type GenColumnNameHook = (data: GenColumnNameHookDto) => GenColumnNameHookDto;
-export type GenColumnNameHookDto = {
+export type GetColumnNameHook = (
+  data: GetColumnNameHookDto
+) => GetColumnNameHookDto;
+export type GetColumnNameHookDto = {
   columnName?: string;
   tableName?: string;
 };
 
+export type BeforeOrderHookDto = {
+  columnName: string;
+  sortOption: SortOptions;
+};
+export type BeforeOrderHook = (data: BeforeOrderHookDto) => BeforeOrderHookDto;
 
-export type DataInputFormatted = {
-  value: any,
-  columnName: string
-}
+export type BeforeGroupHook = (columnName: string) => string;
+
+export type FilterBuilderConfigHooks = {
+  beforeEachCondition?: BeforeEachConditionHook[];
+  beforeOrder?: BeforeOrderHook[];
+  beforeGroup?: BeforeGroupHook;
+  getColumnName?: GetColumnNameHook;
+};
+
+export type FilterConfigOpts = {
+  hooks: FilterBuilderConfigHooks;
+  type: AdapterType;
+};
+
+export type ParamsOperator = { [K: string]: any };

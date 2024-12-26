@@ -1,110 +1,103 @@
-import { ObjectLiteral, Repository, SelectQueryBuilder } from "typeorm";
-import { validate } from "uuid";
 import { BaseCondition } from "./BaseCondition";
-import { QueryData, SortOptions, OperatorEnum, ResultFilter } from "./type";
+import {
+  BeforeEachConditionDto,
+  BeforeOrderHookDto,
+  OperatorEnum,
+  ParamsOperator,
+  QueryData,
+  SortOptions,
+} from "./type";
+import { FilterBuilderAdapter } from "./adapters/FilterBuilderAdapter";
+import { FilterBuilderAdapterFactory } from "./adapters/FilterBuilderAdapterFactory";
 
+export class FilterBuilder<T> extends BaseCondition {
+  private adapter: FilterBuilderAdapter;
+  constructor(instance: T, queryData: QueryData, alias?: string) {
+    super(queryData);
+    this.adapter = FilterBuilderAdapterFactory.create(this.config.type, {
+      core: instance,
+      page: queryData.page,
+      limit: queryData.limit,
+      aliasTableName: alias,
+    });
+  }
 
+  protected processCondition(
+    columName: string,
+    operator: OperatorEnum,
+    params: ParamsOperator
+  ): void {
+    this.adapter.handleCondition(columName, operator, params);
+  }
 
+  /**
+   * Set order clause in query
+   * @param columnName column in database
+   * @param sortOption defaultValue Sort Options: "DESC" or "ASC"
+   * @param queryFieldName fields name in query. Ex: ?age_sort="ASC".
+   * queryFieldName is "age_sort"
+   */
+  order(columnName: string, sortOption?: SortOptions, queryFieldName?: string) {
+    sortOption =
+      queryFieldName && this.queryData[queryFieldName]
+        ? this.queryData[queryFieldName]
+        : sortOption;
+    if (!sortOption) return this;
+    // Run hooks
+    let data: BeforeOrderHookDto = { columnName, sortOption };
+    data = this.config.runBeforeOrder(data);
+    // End Hooks
 
-export class FilterBuilder<T extends ObjectLiteral> extends BaseCondition {
-    private repo: Repository<T>;
-    private selectQueryBuilder: SelectQueryBuilder<T>;
-    private isFistWhereCondition: boolean = true;
+    data.columnName = this.genAccessFieldName(data.columnName);
+    this.adapter.handleOrder(data.columnName, data.sortOption);
 
-    /**
-     * @param repo Repository contain Entity needs filters
-     * @param queryData Query Object in request
-     * @param alias table name
-     */
-    constructor(repo: Repository<T>, queryData: QueryData, alias?: string) {
-        const tableName = alias ?? repo.metadata.tableName;
-        super(queryData, tableName);
-        this.repo = repo;
-        this.selectQueryBuilder = repo.createQueryBuilder(this.ownerName);
-    }
+    return this;
+  }
 
+  /**
+   * Set Order clause by combine town field in query
+   * @param querySortKey field contain column's name in query.
+   * Ex: ?sortKey=age => querySortKey is "sortKey"
+   * @param querySortOpts field contain options in query.
+   * Ex: ?sortValue=DESC  => querySortOpts is "sortValue"
+   */
+  orderCombineField(querySortKey: string, querySortOpts: string) {
+    if (!this.queryData[querySortKey] || !this.queryData[querySortOpts])
+      return this;
+    const columnName = this.queryData[querySortKey];
+    const sortOpts = this.queryData[querySortOpts].toLocaleUpperCase();
+    if (sortOpts !== "DESC" && sortOpts !== "ASC") return this;
+    this.order(columnName, sortOpts);
+    return this;
+  }
 
+  /**
+   * Order with stirng in query
+   * @param stringOrder the string splits sort-data.
+   * Ex: ?sort=age_ASC
+   * @param makeSort logic split stringOrder to sort-data
+   * @returns
+   */
+  orderString(
+    stringOrder: string,
+    makeSort: (str: string) => { columnName: string; opts: SortOptions }
+  ) {
+    const data = makeSort(stringOrder);
+    this.order(data.columnName, data.opts);
+    return this;
+  }
 
-    attribute(attributes: string[]): this {
-        this.selectQueryBuilder.select(attributes);
-        return this;
-    }
+  group(column: string) {
+    // Run hook: Before grouping
+    column = this.config.runBeforeGroup(column);
+    // End hook: Before grouping
 
-    // leftJoin(foreignKey:string, alias:string, condition?: ConditionBuilder):this {
-    //     this.selectQueryBuilder.leftJoinAndSelect(foreignKey,alias);
+    this.adapter.handleGroup(column);
 
-    //     if(condition) {
-    //         const subqueries = condition.getSubQuery();
-    //         subqueries.forEach(subquery => {
-    //             this.selectQueryBuilder[this.getWhereMethodName()](
-    //                 subquery[0], subquery[1] 
-    //             )
-    //         });
-    //     }
-    //     return this;
-    // }
+    return this;
+  }
 
-    // innerJoin(foreignKey:string, alias:string, condition?: ConditionBuilder):this {
-    //     this.selectQueryBuilder.leftJoinAndSelect(foreignKey,alias);
-    //     if(condition) {
-    //         const subqueries = condition.getSubQuery();
-    //         subqueries.forEach(subquery => {
-    //             this.selectQueryBuilder[this.getWhereMethodName()](
-    //                 subquery[0], subquery[1] 
-    //             )
-    //         });
-    //     }
-    //     return this;
-    // }
+  leftJoin() {}
 
-
-    order(
-        queryFieldName: string,
-        columnName?: string,
-        defaultValue?: string,
-    ): this {
-        let { value, columnName: column } = this.formatInputField(queryFieldName, columnName, defaultValue);
-        const sortOptions: SortOptions = ((value as string).toUpperCase()) as SortOptions;
-        if (sortOptions !== "ASC" && sortOptions !== "DESC") return this;
-
-        const fieldName = this.genAccessFieldName(column);
-        this.selectQueryBuilder.orderBy(fieldName, sortOptions);
-        return this;
-    }
-
-    async run(): Promise<ResultFilter> {
-        const skip = this.queryData.page * this.queryData.limit;
-        const take = this.queryData.limit;
-        const cloneSqlBuilder = this.selectQueryBuilder.clone().skip(skip).take(take);
-        try {
-            const arrResult = Promise.all(
-                [
-                    this.selectQueryBuilder.getCount(),
-                    (await cloneSqlBuilder.getRawAndEntities())
-                ]);
-            return {
-                currentPage: this.queryData.page,
-                limit: this.queryData.page,
-                total: arrResult[0],
-                items: arrResult[1].entities
-            }
-        } catch (error) {
-            console.error("Filter error!!", error);
-            throw error;
-        }
-    }
-
-
-    private getWhereMethodName(): "where" | "andWhere" {
-        const methodName: "where" | "andWhere" = this.isFistWhereCondition ? "where" : "andWhere";
-        this.isFistWhereCondition = false;
-        return methodName;
-    }
-
-    protected processSql(sql: string, params: object): void {
-        const whereMethod = this.getWhereMethodName();
-        this.selectQueryBuilder[whereMethod](sql, params);
-    }
-
-
+  innerJoin() {}
 }

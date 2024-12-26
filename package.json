@@ -3,14 +3,21 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rm -r ./dist & tsc"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "eslint-plugin-prettier": "^5.2.1",
     "pg": "^8.13.1",
+    "sequelize": "^6.37.5",
     "typeorm": "^0.3.20"
+  },
+  "dependencies": {
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
   }
 }

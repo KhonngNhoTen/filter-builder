@@ -1,33 +1,67 @@
-import { BeforeEachConditionDto, FilterBuilderConfigHooks, GenColumnNameHookDto } from "./type";
+import {
+  AdapterType,
+  BeforeEachConditionDto,
+  BeforeOrderHookDto,
+  FilterBuilderConfigHooks,
+  FilterConfigOpts,
+  GetColumnNameHookDto,
+} from "./type";
 
- export class FilterBuilderConfig {
-    private static instance: FilterBuilderConfig;
+export class FilterBuilderConfig {
+  private static globalConfig: FilterBuilderConfig;
+  readonly type: AdapterType;
 
-    private hooks: FilterBuilderConfigHooks = {};
-    static getInstance() {
-        if (!this.instance) this.instance = new FilterBuilderConfig();
-        return this.instance;
+  static getGlobalConfig() {
+    if (!this.globalConfig) return new FilterBuilderConfig();
+    return this.globalConfig;
+  }
+
+  static config(options: FilterConfigOpts) {
+    this.globalConfig = new FilterBuilderConfig(options);
+    return this.globalConfig;
+  }
+
+  private readonly hooks: FilterBuilderConfigHooks;
+
+  constructor(opts?: FilterConfigOpts) {
+    this.hooks = opts?.hooks ?? {};
+    this.type = opts?.type ?? "typeorm";
+  }
+
+  runBeforeEachConditionHook(
+    data: BeforeEachConditionDto
+  ): BeforeEachConditionDto {
+    if (
+      this.hooks?.beforeEachCondition &&
+      Array.isArray(this.hooks?.beforeEachCondition)
+    ) {
+      for (let i = 0; i < this.hooks.beforeEachCondition.length; i++) {
+        const hook = this.hooks.beforeEachCondition[i];
+        data = hook(data);
+      }
     }
+    return data;
+  }
 
-    addHooks(hooks: FilterBuilderConfigHooks) {
-        this.hooks = hooks;
+  runGetColumnNameHook(data: GetColumnNameHookDto) {
+    if (this.hooks && this.hooks?.getColumnName)
+      return this.hooks.getColumnName(data);
+    return data;
+  }
+
+  runBeforeOrder(data: BeforeOrderHookDto) {
+    if (this.hooks?.beforeOrder && Array.isArray(this.hooks.beforeOrder)) {
+      const beforeOrderHooks = this.hooks.beforeOrder;
+      for (let i = 0; i < beforeOrderHooks.length; i++) {
+        const hook = beforeOrderHooks[i];
+        data = hook(data);
+      }
     }
+    return data;
+  }
 
-
-    runBeforeEachConditionHook(data: BeforeEachConditionDto): BeforeEachConditionDto {
-        if (this.hooks && this.hooks.beforeEachCondition) {
-            for (let i = 0; i < this.hooks.beforeEachCondition.length; i++) {
-                const hook = this.hooks.beforeEachCondition[i]
-                data = hook(data);
-            }
-        }
-        return data;
-    }
-
-    runGenColumnNameHook(data: GenColumnNameHookDto) {
-        if (this.hooks && this.hooks?.genColumnNameHook)
-            return this.hooks.genColumnNameHook(data);
-        return data;
-    }
-
+  runBeforeGroup(columName: string) {
+    if (this.hooks?.beforeGroup) columName = this.hooks?.beforeGroup(columName);
+    return columName;
+  }
 }
