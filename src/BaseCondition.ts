@@ -3,7 +3,6 @@ import {
   QueryData,
   OperatorEnum,
   FilterConfigOpts,
-  ParamsOperator,
 } from "./type";
 import { FilterBuilderConfig } from "./FilterBuilderConfig";
 import { checkUuid } from "./utils/check-uuid";
@@ -346,7 +345,7 @@ export abstract class BaseCondition {
   ) {
     if (!value) return;
     const accessColumn = this.genAccessFieldName(columnName);
-    this.saveCondition(accessColumn, operator, { [accessColumn]: value });
+    this.saveCondition(accessColumn, operator, value);
   }
 
   /**
@@ -359,13 +358,13 @@ export abstract class BaseCondition {
     if (!values || !Array.isArray(values) || values.length < 2) return;
 
     const accessColumn = this.genAccessFieldName(columnName);
-    this.saveCondition(accessColumn, operator, { [accessColumn]: values });
+    this.saveCondition(accessColumn, operator, values);
   }
 
   protected saveCondition(
     columName: string,
     operator: OperatorEnum,
-    params: ParamsOperator
+    params: any
   ) {
     // Run Hooks: Before Each Condition
     const data = this.config.runBeforeEachConditionHook({
@@ -385,6 +384,6 @@ export abstract class BaseCondition {
   protected abstract processCondition(
     columName: string,
     operator: OperatorEnum,
-    params: ParamsOperator
+    params: any
   ): void;
 }

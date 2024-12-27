@@ -1,6 +1,6 @@
-import { OperatorEnum, ParamsOperator, SortOptions } from "../type";
+import { OperatorEnum, SortOptions } from "../type";
 
-export abstract class FilterBuilderAdapter {
+export abstract class FilterBuilderAdapter<T> {
   protected offset?: number;
   protected limit?: number;
   protected tableName: string;
@@ -30,7 +30,7 @@ export abstract class FilterBuilderAdapter {
   abstract handleCondition(
     columnName: string,
     operator: OperatorEnum,
-    params: ParamsOperator
+    params: any
   ): void;
 
   /**
@@ -47,4 +47,6 @@ export abstract class FilterBuilderAdapter {
   abstract handleGroup(columnName: string): void;
 
   abstract handleHaving(): void;
+
+  abstract handleRun(): Promise<{ total: number; items: T[] }>;
 }

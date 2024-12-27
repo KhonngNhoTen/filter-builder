@@ -1,16 +1,11 @@
 import { ObjectLiteral, Repository, SelectQueryBuilder } from "typeorm";
-import {
-  OperatorEnum,
-  ParamsOperator,
-  ResultFilter,
-  SortOptions,
-} from "../type";
+import { OperatorEnum, ResultFilter, SortOptions } from "../type";
 import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
 import { BaseCondition } from "../BaseCondition";
 
 export class TypeormFilterBuilderAdapter<
   T extends ObjectLiteral,
-> extends FilterBuilderAdapter {
+> extends FilterBuilderAdapter<T> {
   protected isFistWhereCondition: boolean = true;
   protected selectQueryBuilder: SelectQueryBuilder<T>;
 
@@ -30,7 +25,7 @@ export class TypeormFilterBuilderAdapter<
     operator: OperatorEnum,
     params: object
   ): void {
-    params = this.genUniqueParamsName(params);
+    params = this.genUniqueParamsName(columnName, params);
     const fieldNames = Object.keys(params);
 
     const rightClauseCondition = this.genRightClauseCondition(
@@ -66,28 +61,6 @@ export class TypeormFilterBuilderAdapter<
     return methodName;
   }
 
-  async run(): Promise<ResultFilter<T>> {
-    const cloneSqlBuilder = this.selectQueryBuilder.clone();
-    if (this.offset && this.limit)
-      cloneSqlBuilder.skip(this.offset).take(this.limit);
-
-    try {
-      const [total, items] = await Promise.all([
-        this.selectQueryBuilder.getCount(),
-        cloneSqlBuilder.getMany(),
-      ]);
-      return {
-        currentPage: this.page,
-        limit: this.limit || null,
-        total,
-        items: items,
-      };
-    } catch (error) {
-      console.error("Filter error!!", error);
-      throw error;
-    }
-  }
-
   /**
    * Gen right clause of where clause. It depends on the operator;
    * the structure of the right-hand side will vary
@@ -107,19 +80,30 @@ export class TypeormFilterBuilderAdapter<
   }
 
   /** Convert columnName for where-clause params */
-  protected genUniqueParamsName(params: ParamsOperator) {
+  protected genUniqueParamsName(columnName: string, params: any) {
     const uniqueName = (columnName: string) => columnName + "_" + Date.now();
 
-    const key = Object.keys(params)[0];
-    const value = params[key];
-
-    const newParams = Array.isArray(value)
+    const newParams = Array.isArray(params)
       ? {
-          [uniqueName(`${key}_1`)]: value[0],
-          [uniqueName(`${key}_2`)]: value[1],
+          [uniqueName(`${columnName}_1`)]: params[0],
+          [uniqueName(`${columnName}_2`)]: params[1],
         }
-      : { [uniqueName(key)]: value };
+      : { [uniqueName(columnName)]: params };
 
     return newParams;
+  }
+
+  async handleRun(): Promise<{ total: number; items: T[] }> {
+    const cloneSqlBuilder = this.selectQueryBuilder.clone();
+    if (this.offset && this.limit)
+      cloneSqlBuilder.skip(this.offset).take(this.limit);
+    const [total, items] = await Promise.all([
+      this.selectQueryBuilder.getCount(),
+      cloneSqlBuilder.getMany(),
+    ]);
+    return {
+      total,
+      items,
+    };
   }
 }

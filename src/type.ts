@@ -35,7 +35,7 @@ export type BeforeEachConditionHook = (
   data: BeforeEachConditionDto
 ) => BeforeEachConditionDto;
 export type BeforeEachConditionDto = {
-  params: ParamsOperator;
+  params: any;
   operator: OperatorEnum;
   columName: string;
 };
@@ -67,5 +67,3 @@ export type FilterConfigOpts = {
   hooks: FilterBuilderConfigHooks;
   type: AdapterType;
 };
-
-export type ParamsOperator = { [K: string]: any };
