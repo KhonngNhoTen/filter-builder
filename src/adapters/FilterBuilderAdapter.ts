@@ -6,7 +6,7 @@ export abstract class FilterBuilderAdapter<T> {
   protected tableName: string;
   protected page: number;
 
-  constructor(tableName: string, page: number, limit?: number) {
+  constructor(tableName: string, page: number, limit?: number, options?: any) {
     this.tableName = tableName;
     this.page = page;
     if (limit) {
@@ -48,5 +48,8 @@ export abstract class FilterBuilderAdapter<T> {
 
   abstract handleHaving(): void;
 
-  abstract handleRun(): Promise<{ total: number; items: T[] }>;
+  abstract handleRun(): Promise<{
+    total: number;
+    items: T[];
+  }>;
 }

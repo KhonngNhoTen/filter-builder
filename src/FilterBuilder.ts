@@ -1,31 +1,34 @@
 import { BaseCondition } from "./BaseCondition";
 import {
-  BeforeEachConditionDto,
   BeforeOrderHookDto,
+  InstanceTypeOf,
   OperatorEnum,
-  ParamsOperator,
   QueryData,
+  ResultFilter,
+  ResultFilterTransformFuncs,
   SortOptions,
 } from "./type";
 import { FilterBuilderAdapter } from "./adapters/FilterBuilderAdapter";
-import { FilterBuilderAdapterFactory } from "./adapters/FilterBuilderAdapterFactory";
 
-export class FilterBuilder<T> extends BaseCondition {
-  private adapter: FilterBuilderAdapter;
-  constructor(instance: T, queryData: QueryData, alias?: string) {
+export class FilterBuilder<
+  U,
+  T extends InstanceTypeOf<U>,
+> extends BaseCondition {
+  private adapter: FilterBuilderAdapter<T>;
+
+  constructor(core: U, queryData: QueryData, aliasTableName?: string) {
     super(queryData);
-    this.adapter = FilterBuilderAdapterFactory.create(this.config.type, {
-      core: instance,
-      page: queryData.page,
-      limit: queryData.limit,
-      aliasTableName: alias,
+    const type = this.config.type;
+    this.adapter = this.config.factoryAdapter.create(type, this.config, {
+      core: core as any,
+      ...queryData,
     });
   }
 
   protected processCondition(
     columName: string,
     operator: OperatorEnum,
-    params: ParamsOperator
+    params: any
   ): void {
     this.adapter.handleCondition(columName, operator, params);
   }
@@ -97,7 +100,63 @@ export class FilterBuilder<T> extends BaseCondition {
     return this;
   }
 
-  leftJoin() {}
+  async run() {
+    const { items, total } = await this.adapter.handleRun();
+    const data = {
+      currentPage: this.queryData.page,
+      limit: this.queryData.limit,
+      total,
+      items,
+    };
 
-  innerJoin() {}
+    return data;
+  }
+
+  async transform<V extends any>(
+    funcs: ResultFilterTransformFuncs[],
+    chunkSize?: number
+  ): Promise<ResultFilter<V>> {
+    let { items, total } = await this.adapter.handleRun();
+    // Set chunkSize
+    chunkSize = chunkSize ?? items.length;
+    let chunks = this.createChunksItems(items, chunkSize);
+
+    for (let i = 0; i < funcs.length; i++) {
+      const func =
+        funcs[i].constructor.name === "AsyncFunction"
+          ? funcs[i]
+          : async (item: any) => funcs[i](item);
+
+      for (let j = 0; j < chunks.length; j++) {
+        chunks[j] = await this.transformChunk(chunks[j], func);
+      }
+    }
+
+    return {
+      currentPage: this.queryData.page,
+      items: this.parseChunks(chunks) as any[],
+      limit: this.queryData.limit,
+      total: total,
+    };
+  }
+
+  private createChunksItems<T>(items: T[], chunkSize: number) {
+    const chunks = [];
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, i + chunkSize);
+      chunks.push(chunk);
+    }
+    return chunks;
+  }
+
+  private parseChunks<T>(chunks: T[][]) {
+    return chunks.reduce((pre, val) => [...pre, ...val], []);
+  }
+
+  private async transformChunk(
+    chunk: any[],
+    func: (item: any) => Promise<any>
+  ) {
+    return await Promise.all(chunk.map(async (item) => await func(item)));
+  }
 }

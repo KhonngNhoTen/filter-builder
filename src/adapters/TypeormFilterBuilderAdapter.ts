@@ -1,21 +1,29 @@
-import { ObjectLiteral, Repository, SelectQueryBuilder } from "typeorm";
-import { OperatorEnum, ResultFilter, SortOptions } from "../type";
+import { DataSource, SelectQueryBuilder } from "typeorm";
+import { OperatorEnum, SortOptions } from "../type";
 import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
-import { BaseCondition } from "../BaseCondition";
 
+type TypeormFilterBuilderAdapterOptions = {
+  dataSource?: DataSource;
+};
 export class TypeormFilterBuilderAdapter<
-  T extends ObjectLiteral,
+  T extends object,
 > extends FilterBuilderAdapter<T> {
   protected isFistWhereCondition: boolean = true;
   protected selectQueryBuilder: SelectQueryBuilder<T>;
 
   constructor(
-    repo: Repository<T>,
+    entity: T,
     page: number,
     limit?: number,
-    alias?: string
+    alias?: string,
+    options?: TypeormFilterBuilderAdapterOptions
   ) {
-    const tableName = alias ?? repo.metadata.tableName;
+    if (!options?.dataSource)
+      throw new Error("You must set dataSource when using TypeOrmAdapter");
+    const repo = options.dataSource.getRepository(
+      entity as object & { name: string; type: T }
+    );
+    const tableName = repo.metadata.tableName;
     super(tableName, page, limit);
     this.selectQueryBuilder = repo.createQueryBuilder(this.getTableName());
   }
@@ -93,7 +101,7 @@ export class TypeormFilterBuilderAdapter<
     return newParams;
   }
 
-  async handleRun(): Promise<{ total: number; items: T[] }> {
+  async handleRun() {
     const cloneSqlBuilder = this.selectQueryBuilder.clone();
     if (this.offset && this.limit)
       cloneSqlBuilder.skip(this.offset).take(this.limit);

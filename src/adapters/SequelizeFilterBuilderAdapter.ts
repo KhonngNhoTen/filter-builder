@@ -1,24 +1,14 @@
 import { FindManyOptions } from "typeorm";
 import { OperatorEnum, SortOptions } from "../type";
 import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
-import { Model, Op } from "sequelize";
-
-class BaseModel<T extends {}, U extends {}> extends Model<T, U> {}
-export class SequelizeFilterBuilderAdapter<
-  T extends Model,
-> extends FilterBuilderAdapter<T> {
-  protected readonly model: typeof BaseModel<T, T>;
-
+import { Op } from "sequelize";
+export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
+  protected readonly model: T;
   protected selectData: FindManyOptions = { where: {} };
-  constructor(
-    model: typeof BaseModel,
-    page: number,
-    limit?: number,
-    alias?: string
-  ) {
-    const tableName = model.tableName;
+  constructor(model: T, page: number, limit?: number, alias?: string) {
+    const tableName = (model as any).tableName;
     super(tableName, page, limit);
-    this.model = model;
+    this.model = model as any;
   }
 
   genOperator(operator: OperatorEnum, params: any) {
@@ -58,11 +48,11 @@ export class SequelizeFilterBuilderAdapter<
     throw new Error("Method not implemented.");
   }
 
-  async handleRun(): Promise<{ total: number; items: T[] }> {
-    const countFunc = this.model.count(
+  async handleRun() {
+    const countFunc = (this.model as any).count(
       this.selectData as any
     ) as unknown as number;
-    const findMany = this.model.findAll({
+    const findMany = (this.model as any).findAll({
       ...(this.selectData as any),
       limit: this.limit,
       offset: this.offset,

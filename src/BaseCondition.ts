@@ -3,6 +3,7 @@ import {
   QueryData,
   OperatorEnum,
   FilterConfigOpts,
+  UpdateFilterConfigOpts,
 } from "./type";
 import { FilterBuilderConfig } from "./FilterBuilderConfig";
 import { checkUuid } from "./utils/check-uuid";
@@ -11,21 +12,18 @@ export abstract class BaseCondition {
   protected queryData: QueryData;
   protected ownerName?: string = "";
   protected config: FilterBuilderConfig;
-  constructor(
-    queryData: QueryData,
-    ownerName?: string,
-    config?: FilterBuilderConfig
-  ) {
+  constructor(queryData: QueryData, ownerName?: string) {
     this.queryData = queryData;
     this.ownerName = ownerName;
-    this.config = config ?? FilterBuilderConfig.getGlobalConfig();
+    this.config = FilterBuilderConfig.getGlobalConfig();
   }
 
   /**
    * Manual config
    */
-  setConfig(options: FilterConfigOpts) {
-    this.config = new FilterBuilderConfig(options);
+  setConfig(options: UpdateFilterConfigOpts) {
+    this.config = this.config.clone();
+    this.config.update(options);
     return this;
   }
 

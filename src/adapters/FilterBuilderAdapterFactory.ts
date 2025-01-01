@@ -1,19 +1,30 @@
 import { AdapterType } from "../type";
-import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
+import { SequelizeFilterBuilderAdapter } from "./SequelizeFilterBuilderAdapter";
 import { TypeormFilterBuilderAdapter } from "./TypeormFilterBuilderAdapter";
+import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
+import { FilterBuilderConfig } from "../FilterBuilderConfig";
 
 export class FilterBuilderAdapterFactory {
-  static create(
+  static create<T extends object>(
     type: AdapterType = "typeorm",
+    config: FilterBuilderConfig,
     opts: {
-      core: any;
+      core: T;
       page: number;
       limit?: number;
       aliasTableName?: string;
     }
-  ): FilterBuilderAdapter {
+  ): FilterBuilderAdapter<T> {
     if (type === "typeorm")
       return new TypeormFilterBuilderAdapter(
+        opts.core,
+        opts.page,
+        opts.limit,
+        opts.aliasTableName,
+        { dataSource: config.dataSource }
+      );
+    if (type === "sequelize")
+      return new SequelizeFilterBuilderAdapter(
         opts.core,
         opts.page,
         opts.limit,

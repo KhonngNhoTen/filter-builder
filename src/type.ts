@@ -1,3 +1,7 @@
+import { ObjectLiteral, Repository } from "typeorm";
+import { Model, ModelStatic } from "sequelize";
+import { FilterBuilderAdapterFactory } from "./adapters/FilterBuilderAdapterFactory";
+
 export type OperatorEnum =
   | "LIKE"
   | "ILIKE"
@@ -66,4 +70,17 @@ export type FilterBuilderConfigHooks = {
 export type FilterConfigOpts = {
   hooks: FilterBuilderConfigHooks;
   type: AdapterType;
+  dataSource?: any;
+  factoryAdapter?: typeof FilterBuilderAdapterFactory;
 };
+
+export type UpdateFilterConfigOpts = Omit<
+  FilterConfigOpts,
+  "dataSource" | "type" | "factoryAdapter"
+>;
+
+export type ResultFilterTransformFuncs = (items: any) => Promise<any> | any;
+
+export type InstanceTypeOf<T> = T extends new (...args: any[]) => infer R
+  ? R
+  : never;

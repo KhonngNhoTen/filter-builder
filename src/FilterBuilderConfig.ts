@@ -1,3 +1,4 @@
+import { FilterBuilderAdapterFactory } from "./adapters/FilterBuilderAdapterFactory";
 import {
   AdapterType,
   BeforeEachConditionDto,
@@ -5,11 +6,15 @@ import {
   FilterBuilderConfigHooks,
   FilterConfigOpts,
   GetColumnNameHookDto,
+  UpdateFilterConfigOpts,
 } from "./type";
 
 export class FilterBuilderConfig {
   private static globalConfig: FilterBuilderConfig;
+  private hooks: FilterBuilderConfigHooks;
   readonly type: AdapterType;
+  readonly dataSource?: any;
+  readonly factoryAdapter: typeof FilterBuilderAdapterFactory;
 
   static getGlobalConfig() {
     if (!this.globalConfig) return new FilterBuilderConfig();
@@ -21,11 +26,25 @@ export class FilterBuilderConfig {
     return this.globalConfig;
   }
 
-  private readonly hooks: FilterBuilderConfigHooks;
-
   constructor(opts?: FilterConfigOpts) {
     this.hooks = opts?.hooks ?? {};
     this.type = opts?.type ?? "typeorm";
+    this.dataSource = opts?.dataSource;
+    this.factoryAdapter = opts?.factoryAdapter ?? FilterBuilderAdapterFactory;
+  }
+
+  clone() {
+    const { hooks, type, dataSource, factoryAdapter } = this;
+    return new FilterBuilderConfig({
+      hooks,
+      type,
+      dataSource,
+      factoryAdapter,
+    });
+  }
+
+  update(options: UpdateFilterConfigOpts) {
+    this.hooks = options.hooks;
   }
 
   runBeforeEachConditionHook(
