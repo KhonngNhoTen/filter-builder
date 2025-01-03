@@ -1,5 +1,3 @@
-import { ObjectLiteral, Repository } from "typeorm";
-import { Model, ModelStatic } from "sequelize";
 import { FilterBuilderAdapterFactory } from "./adapters/FilterBuilderAdapterFactory";
 
 export type OperatorEnum =
@@ -60,10 +58,13 @@ export type BeforeOrderHook = (data: BeforeOrderHookDto) => BeforeOrderHookDto;
 
 export type BeforeGroupHook = (columnName: string) => string;
 
+export type BeforeJoinHook = (joinData: ConditionData) => ConditionData;
+
 export type FilterBuilderConfigHooks = {
   beforeEachCondition?: BeforeEachConditionHook[];
   beforeOrder?: BeforeOrderHook[];
   beforeGroup?: BeforeGroupHook;
+  beforeJoinHook?: BeforeJoinHook;
   getColumnName?: GetColumnNameHook;
 };
 
@@ -84,3 +85,13 @@ export type ResultFilterTransformFuncs = (items: any) => Promise<any> | any;
 export type InstanceTypeOf<T> = T extends new (...args: any[]) => infer R
   ? R
   : never;
+
+export type ConditionData = {
+  target: string;
+  prop: any;
+  select: {
+    columnName: string;
+    operator: OperatorEnum;
+    params: any;
+  }[];
+};

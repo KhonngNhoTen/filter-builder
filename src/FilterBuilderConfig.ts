@@ -3,6 +3,7 @@ import {
   AdapterType,
   BeforeEachConditionDto,
   BeforeOrderHookDto,
+  ConditionData,
   FilterBuilderConfigHooks,
   FilterConfigOpts,
   GetColumnNameHookDto,
@@ -82,5 +83,11 @@ export class FilterBuilderConfig {
   runBeforeGroup(columName: string) {
     if (this.hooks?.beforeGroup) columName = this.hooks?.beforeGroup(columName);
     return columName;
+  }
+
+  runBeforeJoin(joinData: ConditionData) {
+    if (this.hooks?.beforeJoinHook)
+      joinData = this.hooks?.beforeJoinHook(joinData);
+    return joinData;
   }
 }

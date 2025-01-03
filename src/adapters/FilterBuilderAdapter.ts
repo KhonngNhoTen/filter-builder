@@ -1,4 +1,4 @@
-import { OperatorEnum, SortOptions } from "../type";
+import { ConditionData, OperatorEnum, SortOptions } from "../type";
 
 export abstract class FilterBuilderAdapter<T> {
   protected offset?: number;
@@ -52,4 +52,6 @@ export abstract class FilterBuilderAdapter<T> {
     total: number;
     items: T[];
   }>;
+
+  abstract handleJoin(dataJoin: ConditionData, required: boolean): void;
 }

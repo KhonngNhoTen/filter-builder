@@ -1,5 +1,5 @@
 import { DataSource, SelectQueryBuilder } from "typeorm";
-import { OperatorEnum, SortOptions } from "../type";
+import { ConditionData, OperatorEnum, SortOptions } from "../type";
 import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
 
 type TypeormFilterBuilderAdapterOptions = {
@@ -113,5 +113,16 @@ export class TypeormFilterBuilderAdapter<
       total,
       items,
     };
+  }
+
+  handleJoin(dataJoin: ConditionData, required: boolean): void {
+    const joinMethod = required ? "innerJoinAndSelect" : "leftJoinAndSelect";
+    const target = dataJoin.target;
+    const alias = dataJoin?.prop ?? target;
+
+    this.selectQueryBuilder[joinMethod](dataJoin.target, alias);
+    dataJoin.select.forEach((val) =>
+      this.handleCondition(`${val.columnName}`, val.operator, val.params)
+    );
   }
 }

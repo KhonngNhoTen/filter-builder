@@ -10,14 +10,14 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "eslint-plugin-prettier": "^5.2.1",
-    "pg": "^8.13.1",
-    "sequelize": "^6.37.5",
-    "typeorm": "^0.3.20"
-  },
-  "dependencies": {
+    "@types/sequelize": "^4.28.20",
     "eslint": "^9.17.0",
+    "eslint-plugin-prettier": "^5.2.1",
     "prettier": "^3.4.2",
+    "typeorm": "^0.3.20",
     "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "typeorm": "^0.3.20"
   }
 }

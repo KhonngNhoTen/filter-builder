@@ -9,6 +9,7 @@ import {
   SortOptions,
 } from "./type";
 import { FilterBuilderAdapter } from "./adapters/FilterBuilderAdapter";
+import { Condition } from "./Condition";
 
 export class FilterBuilder<
   U,
@@ -98,6 +99,24 @@ export class FilterBuilder<
     this.adapter.handleGroup(column);
 
     return this;
+  }
+
+  leftJoin(target: Condition) {
+    this.join(target, false);
+    return this;
+  }
+
+  innerJoin(target: Condition) {
+    this.join(target, true);
+    return this;
+  }
+
+  private join(target: Condition, required: boolean) {
+    let subdata = target.build();
+    // Run hook
+    subdata = this.config.runBeforeJoin(subdata);
+    // End hook
+    this.adapter.handleJoin(subdata, required);
   }
 
   async run() {
