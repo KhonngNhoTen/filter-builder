@@ -1,5 +1,7 @@
 import { FilterBuilderAdapterFactory } from "./adapters/FilterBuilderAdapterFactory";
 
+export type LogicalOperator = "OR" | "AND";
+
 export type OperatorEnum =
   | "LIKE"
   | "ILIKE"
@@ -39,15 +41,14 @@ export type BeforeEachConditionHook = (
 export type BeforeEachConditionDto = {
   params: any;
   operator: OperatorEnum;
-  columName: string;
+  columnName: string;
 };
 
 export type GetColumnNameHook = (
   data: GetColumnNameHookDto
 ) => GetColumnNameHookDto;
 export type GetColumnNameHookDto = {
-  columnName?: string;
-  tableName?: string;
+  columnName: string;
 };
 
 export type BeforeOrderHookDto = {
@@ -87,11 +88,12 @@ export type InstanceTypeOf<T> = T extends new (...args: any[]) => infer R
   : never;
 
 export type ConditionData = {
-  target: string;
-  prop: any;
-  select: {
+  path: string;
+  target: any;
+  conditions: {
     columnName: string;
     operator: OperatorEnum;
     params: any;
   }[];
+  attributes?: string[];
 };

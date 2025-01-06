@@ -1,7 +1,8 @@
-import { BaseCondition } from "./BaseCondition";
+import { BaseFilter } from "./BaseFilter";
 import {
   BeforeOrderHookDto,
   InstanceTypeOf,
+  LogicalOperator,
   OperatorEnum,
   QueryData,
   ResultFilter,
@@ -10,16 +11,16 @@ import {
 } from "./type";
 import { FilterBuilderAdapter } from "./adapters/FilterBuilderAdapter";
 import { Condition } from "./Condition";
+import { SubFilter } from "./SubFilter";
 
-export class FilterBuilder<
-  U,
-  T extends InstanceTypeOf<U>,
-> extends BaseCondition {
+export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
   private adapter: FilterBuilderAdapter<T>;
+  private core: U;
 
   constructor(core: U, queryData: QueryData, aliasTableName?: string) {
     super(queryData);
     const type = this.config.type;
+    this.core = core;
     this.adapter = this.config.factoryAdapter.create(type, this.config, {
       core: core as any,
       ...queryData,
@@ -101,24 +102,6 @@ export class FilterBuilder<
     return this;
   }
 
-  leftJoin(target: Condition) {
-    this.join(target, false);
-    return this;
-  }
-
-  innerJoin(target: Condition) {
-    this.join(target, true);
-    return this;
-  }
-
-  private join(target: Condition, required: boolean) {
-    let subdata = target.build();
-    // Run hook
-    subdata = this.config.runBeforeJoin(subdata);
-    // End hook
-    this.adapter.handleJoin(subdata, required);
-  }
-
   async run() {
     const { items, total } = await this.adapter.handleRun();
     const data = {
@@ -159,6 +142,56 @@ export class FilterBuilder<
     };
   }
 
+  leftJoin(target: any, path: string, attributes?: string[]): this;
+  leftJoin(target: Condition): this;
+  leftJoin(target: Condition | any, path?: string, attributes?: string[]) {
+    this.join(false, target, path, attributes);
+    return this;
+  }
+
+  innerJoin(target: any, path: string, attributes?: string[]): this;
+  innerJoin(target: Condition): this;
+  innerJoin(target: any, path?: string, attributes?: string[]) {
+    this.join(true, target, path, attributes);
+    return this;
+  }
+
+  /**
+   * Join current table with target. Depends on "required" param,
+   * method join is leftJoin or innerJoin.
+   * @param required - False is leftJoin, True is innerJoin
+   * @param target - model (entity) needs join or Condition instance.
+   * @param path - path data of result filter.
+   * @param attributes - attributes in table join.
+   */
+  private join(
+    required: boolean,
+    target: Condition | any,
+    path?: string,
+    attributes?: string[]
+  ) {
+    let subFilter: SubFilter<T> | undefined = undefined;
+    if (target instanceof Condition)
+      subFilter = target.build(this.queryData, this.config, this.adapter);
+    else if (path) {
+      subFilter = new SubFilter(
+        this.queryData,
+        target,
+        path,
+        this.config,
+        this.adapter
+      );
+      if (attributes) subFilter.attributes(attributes);
+    }
+    if (!subFilter) throw new Error("Build SubFilter is fail.");
+
+    let subdata = subFilter.conditionData;
+    // Run hook
+    subdata = this.config.runBeforeJoin(subdata);
+    // End hook
+    this.adapter.handleJoin(subdata, required);
+  }
+
   private createChunksItems<T>(items: T[], chunkSize: number) {
     const chunks = [];
     for (let i = 0; i < items.length; i += chunkSize) {
@@ -177,5 +210,23 @@ export class FilterBuilder<
     func: (item: any) => Promise<any>
   ) {
     return await Promise.all(chunk.map(async (item) => await func(item)));
+  }
+
+  protected select(attributes?: string[], skips?: string[] | "*"): void {
+    let select: string[] = [];
+    if (attributes) select = attributes;
+    else if (skips === "*") select = [];
+    else if (skips) {
+      const columns = Object.keys(this.adapter.getColumns());
+      columns.forEach((val) =>
+        !skips.includes(val) ? select.push(val) : null
+      );
+    }
+
+    this.adapter.handleSelect(select);
+  }
+
+  logicalCondition(operator: LogicalOperator, conditions: Condition[]): this {
+    throw new Error("Method not implemented.");
   }
 }

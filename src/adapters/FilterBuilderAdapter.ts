@@ -1,24 +1,39 @@
-import { ConditionData, OperatorEnum, SortOptions } from "../type";
+import { SubFilter } from "../SubFilter";
+import {
+  ConditionData,
+  LogicalOperator,
+  OperatorEnum,
+  SortOptions,
+} from "../type";
 
 export abstract class FilterBuilderAdapter<T> {
   protected offset?: number;
-  protected limit?: number;
-  protected tableName: string;
-  protected page: number;
+  protected limit: number | "*" = 10;
+  protected ownerName: string;
+  protected page: number = 1;
 
   constructor(tableName: string, page: number, limit?: number, options?: any) {
-    this.tableName = tableName;
+    this.ownerName = tableName;
     this.page = page;
     if (limit) {
-      this.offset = (page - 1) * limit + 1;
-      this.limit = limit;
-      this.page = page;
+      this.offset = page ? (page - 1) * limit : 0;
+      this.limit = limit ?? 10;
+      this.page = page ?? 1;
     }
   }
 
-  /** Get table name */
-  getTableName(): string {
-    return this.tableName;
+  /**
+   * Get table name
+   */
+  getOwnerName(): string {
+    return this.ownerName;
+  }
+
+  /**
+   * Gen alias for select table
+   */
+  genAlias(path: string) {
+    return path;
   }
 
   /**
@@ -54,4 +69,27 @@ export abstract class FilterBuilderAdapter<T> {
   }>;
 
   abstract handleJoin(dataJoin: ConditionData, required: boolean): void;
+
+  /**
+   * Get column in current table
+   * @param target class ORM represents table
+   */
+  abstract getColumns(target?: any): Record<string, any>;
+
+  /**
+   * Handle select columns in current table
+   * @param attribute list of attribute need to select.
+   * @param path path for linked table
+   */
+  abstract handleSelect(attribute: string[], path?: string): void;
+
+  /**
+   * handle "and", "or" query.
+   * @param operator
+   * @param subFilters
+   */
+  abstract handleLogicalOperator<U>(
+    operator: LogicalOperator,
+    subFilters: SubFilter<U>[]
+  ): void;
 }
