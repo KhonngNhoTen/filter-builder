@@ -1,4 +1,5 @@
 import { FilterBuilderAdapterFactory } from "./adapters/FilterBuilderAdapterFactory";
+import { FilterBuilderConfig } from "./FilterBuilderConfig";
 
 export type LogicalOperator = "OR" | "AND";
 
@@ -13,8 +14,8 @@ export type OperatorEnum =
   | "IN"
   | "BETWEEN";
 export class BaseQueryData {
-  readonly page: number = 1;
-  readonly limit: number = 10;
+  readonly page?: number = 1;
+  readonly limit?: number = 10;
 }
 
 export type ResultFilter<T> = {
@@ -26,9 +27,18 @@ export type ResultFilter<T> = {
 
 export type SortOptions = "ASC" | "DESC";
 
-export type AdapterType = "typeorm" | "sequelize";
+export type AdapterType = "typeorm" | "sequelize" | "custom";
 
 export type QueryData = BaseQueryData & Record<string, any>;
+
+export type FilterBuilderAdapterFactoryOptions<T> = {
+  type: AdapterType | undefined;
+  config: FilterBuilderConfig;
+  mainTarget: T;
+  page: number;
+  limit?: number;
+  aliasTableName?: string;
+};
 
 export type DataInputFormatted = {
   value: any;
@@ -59,7 +69,7 @@ export type BeforeOrderHook = (data: BeforeOrderHookDto) => BeforeOrderHookDto;
 
 export type BeforeGroupHook = (columnName: string) => string;
 
-export type BeforeJoinHook = (joinData: ConditionData) => ConditionData;
+export type BeforeJoinHook = (joinData: JoinData) => JoinData;
 
 export type FilterBuilderConfigHooks = {
   beforeEachCondition?: BeforeEachConditionHook[];
@@ -70,7 +80,7 @@ export type FilterBuilderConfigHooks = {
 };
 
 export type FilterConfigOpts = {
-  hooks: FilterBuilderConfigHooks;
+  hooks?: FilterBuilderConfigHooks;
   type: AdapterType;
   dataSource?: any;
   factoryAdapter?: typeof FilterBuilderAdapterFactory;
@@ -87,13 +97,16 @@ export type InstanceTypeOf<T> = T extends new (...args: any[]) => infer R
   ? R
   : never;
 
-export type ConditionData = {
+export type JoinData = {
   path: string;
   target: any;
-  conditions: {
-    columnName: string;
-    operator: OperatorEnum;
-    params: any;
-  }[];
+  conditions: ConditionData[];
   attributes?: string[];
+  required?: boolean;
+};
+export type ConditionData = {
+  columnName: string;
+  operator: OperatorEnum;
+  params: any | any[];
+  path?: string;
 };

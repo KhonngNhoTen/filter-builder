@@ -1,6 +1,7 @@
 import { SubFilter } from "../SubFilter";
 import {
   ConditionData,
+  JoinData,
   LogicalOperator,
   OperatorEnum,
   SortOptions,
@@ -14,17 +15,21 @@ import {
   Model,
   WhereOptions,
 } from "sequelize";
+
+type MyFindOptions<T> = Omit<FindOptions, "include"> & {
+  include?: IncludeOptions[];
+  order?: [][];
+};
+
 export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
   protected readonly model: T;
   protected myName: string;
   protected dataJoinMap: any = {};
 
-  protected include?: IncludeOptions[];
-  protected where: WhereOptions = {};
+  // protected include: IncludeOptions[] = [];
+  protected where: WhereOptions<T> = {};
 
-  protected selectData: FindOptions<T> = {
-    order: [] as [string, string][],
-  };
+  protected selectData: MyFindOptions<T> = {};
 
   constructor(model: T, page: number, limit?: number, alias?: string) {
     const tableName = (model as any).tableName;
@@ -32,19 +37,15 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
     this.model = model as any;
     this.myName = (model as any).name ?? alias;
     this.dataJoinMap = { [alias ?? tableName]: undefined };
+    this.targets[""] = model;
   }
 
-  handleCondition(
-    columnName: string,
-    operator: OperatorEnum,
-    params: any
-  ): void {
-    if (!this.selectData?.where) this.where = {};
-    const condition = this.parseConditions([{ columnName, operator, params }]);
-    const checkOperator = Object.keys(this.where)[0];
-    if (checkOperator && Array.isArray((this.where as any)[checkOperator])) {
-      (this.where as any)[checkOperator].push(condition);
-    } else this.where = condition;
+  handleCondition(condition: ConditionData): void {
+    const conditionObj = this.parseConditions([condition]);
+    /** If condition in where-clause is "and"|"or" */
+    if ((this.where as any)[Op.and] || (this.where as any)[Op.or]) {
+      this.where = this.concatLogicalWhere(this.where, conditionObj);
+    } else this.where = { ...this.where, ...conditionObj };
   }
 
   handleOrder(columName: string, sortOpts: SortOptions): void {
@@ -68,7 +69,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
       ...(this.selectData as any),
       where: this.where,
     };
-    if (this.include) dataSelect.include = this.include;
+    // if (this.include) dataSelect.include = this.include;
     if (this.limit !== "*") {
       dataSelect.limit = this.limit;
       dataSelect.offset = this.offset;
@@ -87,34 +88,45 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
     return { total, items };
   }
 
-  handleJoin(dataJoin: ConditionData, required: boolean): void {
-    if (!this?.include) this.include = [];
-    const path = dataJoin.path.split(".");
-    const parentInclude = this.findContainIncludeByPath(path);
-
+  handleJoin(dataJoin: JoinData): void {
+    if (!this?.selectData.include) this.selectData.include = [];
+    const path = dataJoin.path;
     const include: IncludeOptions = {
-      required,
-      as: path[path.length - 1],
+      required: dataJoin.required,
+      as: path,
       model: dataJoin.target,
       where: {},
-      subQuery: false,
     };
 
     // Add condition into include-clause
-    include.where = this.parseConditions(dataJoin.conditions);
+    if (dataJoin.conditions)
+      include.where = this.parseConditions(dataJoin.conditions);
+    const lastDotPosition = path.lastIndexOf(".");
+    let parentInclude: any =
+      lastDotPosition === -1
+        ? this.selectData
+        : this.findIncludeObjectByPath(path.slice(0, lastDotPosition));
 
-    if (!parentInclude.include) parentInclude.include = [];
-    parentInclude.include.push(include);
+    if (parentInclude && !parentInclude?.include)
+      parentInclude.include = [include];
+    else if (parentInclude && Array.isArray(parentInclude.include))
+      parentInclude.include.push(include);
 
     // Handle select attributes
     if (dataJoin.attributes)
       this.handleSelect(dataJoin.attributes, undefined, include);
+
+    // Disable subQuery
+    this.selectData.subQuery = false;
+
+    // Finnally, add target into this.targets
+    super.handleJoin(dataJoin);
   }
 
   getColumns(target?: any): Record<string, any> {
     if (!target) target = this.model;
 
-    const dataValues = target?.prototype?.dataValues;
+    const dataValues = target.getAttributes();
     if (!dataValues) throw new Error("Model's datavalues is null");
     return dataValues;
   }
@@ -122,12 +134,14 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
   handleSelect(
     attribute: string[],
     path?: string,
-    includeObject?: IncludeOptions | FindOptions
+    includeObject?: IncludeOptions | FindOptions<any>
   ): void {
-    if (path)
-      includeObject = includeObject ?? this.findContainIncludeByPath(path);
-    else includeObject = this.selectData;
-    includeObject.attributes = attribute;
+    if (path) includeObject = this.findIncludeObjectByPath(path);
+    else if (!includeObject) includeObject = this.selectData;
+
+    if (includeObject.attributes && Array.isArray(includeObject.attributes))
+      includeObject.attributes.push(...attribute);
+    else includeObject.attributes = attribute;
   }
 
   handleLogicalOperator<U>(
@@ -138,7 +152,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
     const conditions: any[] = [];
     for (let i = 0; i < subFilters.length; i++) {
       const conditionData = subFilters[i].conditionData;
-      if (conditionData.path === "")
+      if (conditionData.path === "" && conditionData.conditions)
         conditions.push(this.parseConditions(conditionData.conditions));
       else
         conditions.push(
@@ -151,9 +165,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
         );
     }
 
-    this.where = {
-      [Op.and]: [this.where, { [op]: conditions }],
-    };
+    this.where = this.concatLogicalWhere(this.where, { [op]: conditions });
   }
 
   //
@@ -182,7 +194,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
     };
 
     if (operator === "ILIKE" || operator === "LIKE") params = `%${params}%`;
-    else if (operator === "BETWEEN") params = `(${params.toString()})`;
+    // else if (operator === "BETWEEN") params = params;
 
     return { [Op[mapOperators[operator]]]: params };
   }
@@ -213,41 +225,56 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
    *
    * Ex: User.find(include:[<Student...>]), the User joinning to Student.
    *
-   * In FilterBuilder, the IncludeObject is represented by the path.
-   *
-   * Ex: User.find(include:[<Student...>, include: [<...Course>]]).
-   * The Student's path is: "Student".
-   * The Course's path is "Student.Course".
-   *
-   * So, to set link between town tables, you can use path to find IncludeObject
+   * So, IncludeObject represents a Target in FilterBuilder.
+   * Using path to find IncludeObject equivalent to using path to find Target
    * @param path Include Object's path
    * @returns
    */
-  protected findContainIncludeByPath(path: string | string[]): {
-    include: any[];
-  } {
+  findIncludeObjectByPath(path: string | string[]) {
     if (!Array.isArray(path)) path = path.split(".");
-    let currInclude = null,
-      parentInclude = null;
-
+    let currentAlias = "";
+    let current: IncludeOptions | null = this.selectData;
     for (let i = 0; i < path.length; i++) {
       const joinName = path[i];
-      parentInclude = currInclude;
-      const parent: any = i === 0 ? this.include : parentInclude;
-
-      const foundIndex = (parent as []).findIndex(
-        (e: any) => e.as === joinName
-      );
-
-      if (foundIndex < 0) {
-        currInclude = null;
+      currentAlias =
+        currentAlias === "" ? joinName : `${currentAlias}.${joinName}`;
+      let find;
+      if (
+        !current?.include ||
+        (find = current.include.findIndex(
+          (val: any) => val.as === currentAlias
+        )) === -1
+      ) {
+        current = null;
         break;
       }
-      currInclude = parent[foundIndex];
+      current = current.include[find] as IncludeOptions;
     }
 
-    if (!parentInclude) throw new Error(`Not found in join object`);
+    if (!current)
+      throw new Error("Not found include object with path: " + currentAlias);
+    return current;
+  }
 
-    return parentInclude;
+  /**
+   * Concat current where object with logical operator
+   * @returns
+   */
+  private concatLogicalWhere(whereClause: any, conditions: any) {
+    const isEmpty = (obj: any) => Object.entries(obj).length === 0;
+    const isLogicOperator = (obj: any): boolean =>
+      obj[Op.and] !== undefined || obj[Op.or] !== undefined;
+
+    if (isEmpty(whereClause) && !isLogicOperator(whereClause))
+      return conditions;
+
+    return {
+      [Op.and]: [
+        ...(!isLogicOperator(whereClause)
+          ? Object.keys(whereClause).map((key) => ({ [key]: whereClause[key] }))
+          : [whereClause]),
+        conditions,
+      ],
+    };
   }
 }

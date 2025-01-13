@@ -193,11 +193,25 @@ export abstract class BaseFilter implements IFilter {
     const stringArray = this.queryData[queryFieldName];
     if (stringArray) {
       const [begining, ending] = makeArray(stringArray);
-      if (ending && !!!begining) this.binaryOperator(ending, "<=", columnName);
+      if (ending && !!!begining) this.binaryOperator("<=", columnName, ending);
       else if (!!!ending && begining)
-        this.binaryOperator(ending, ">=", columnName);
+        this.binaryOperator(">=", columnName, ending);
       else if (ending && begining)
         this.ternaryOperation(columnName, "BETWEEN", [begining, ending]);
+    }
+    return this;
+  }
+
+  inConvertedArray(
+    queryFieldName: string,
+    makeArray: (arg: string) => Array<any>,
+    columnName?: string
+  ): this {
+    columnName = columnName ?? queryFieldName;
+    const stringArray = this.queryData[queryFieldName];
+    if (stringArray) {
+      const arr = makeArray(stringArray);
+      this.binaryOperator("IN", columnName, arr);
     }
     return this;
   }
@@ -289,7 +303,7 @@ export abstract class BaseFilter implements IFilter {
   protected binaryOperator(
     operator: OperatorEnum,
     columnName: string,
-    value: any
+    value: any | any[]
   ) {
     if (!value) return;
     this.saveCondition(columnName, operator, value);

@@ -4,14 +4,32 @@ import { IFilter } from "./IFilter";
 import { SubFilter } from "./SubFilter";
 import { QueryData } from "./type";
 
+type BuildSubFilterOpts<T> = {
+  queryData: QueryData;
+  adapter: FilterBuilderAdapter<T>;
+  target?: any;
+  path?: string;
+  config?: FilterBuilderConfig;
+};
 export class Condition implements IFilter {
   private funcs: { funcs: keyof IFilter; params: any[] }[];
   target?: any;
   path?: string;
-  constructor(target?: any, path?: string) {
+
+  constructor(path: string);
+  constructor(target: any, path: string);
+  constructor(arg1?: unknown, arg2?: string) {
+    if (arg1 && arg2) {
+      this.target = arg1;
+      this.path = arg2;
+    } else if (!arg1 && arg2) {
+      this.target = undefined;
+      this.path = arg2;
+    } else {
+      this.target = undefined;
+      this.path = "";
+    }
     this.funcs = [];
-    this.target = target;
-    this.path = path;
   }
 
   attributes(attributes: string[]): this {
@@ -49,6 +67,18 @@ export class Condition implements IFilter {
     this.funcs.push({
       funcs: "iLike",
       params: [queryFieldName, columnName, defaultValue],
+    });
+    return this;
+  }
+
+  inConvertedArray(
+    queryFieldName: string,
+    makeArray: (arg: string) => Array<any>,
+    columnName?: string
+  ): this {
+    this.funcs.push({
+      funcs: "inConvertedArray",
+      params: [queryFieldName, makeArray, columnName],
     });
     return this;
   }
@@ -177,18 +207,17 @@ export class Condition implements IFilter {
     return this;
   }
 
-  build<T>(
-    queryData: QueryData,
-    config: FilterBuilderConfig,
-    adapter: FilterBuilderAdapter<T>,
-    target?: any,
-    path?: string
-  ): SubFilter<T> {
+  /***
+   *  Build to Subfilter
+   */
+
+  build<T>(opts: BuildSubFilterOpts<T>): SubFilter<T> {
+    let { adapter, queryData, config, path, target } = opts;
     target = this.target ?? target;
     path = this.path ?? path;
-    if (!target || !path)
-      throw new Error(`Path or Target is undefined when build`);
-    const subFilter = new SubFilter(queryData, target, path, config, adapter);
+    if (!config) config = FilterBuilderConfig.getGlobalConfig();
+
+    const subFilter = new SubFilter(queryData, adapter, path, target, config);
     this.funcs.forEach((val) => {
       (subFilter[val.funcs] as any)(...val.params);
     });

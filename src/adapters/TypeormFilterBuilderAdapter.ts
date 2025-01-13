@@ -7,6 +7,7 @@ import {
 } from "typeorm";
 import {
   ConditionData,
+  JoinData,
   LogicalOperator,
   OperatorEnum,
   SortOptions,
@@ -42,16 +43,13 @@ export class TypeormFilterBuilderAdapter<
     this.selectQueryBuilder = repo.createQueryBuilder(this.getOwnerName());
     this.repository = repo;
     this.datasource = options.dataSource;
+    this.targets[""] = entity;
   }
 
-  handleCondition(
-    columnName: string,
-    operator: OperatorEnum,
-    params: object
-  ): void {
+  handleCondition(conditionData: ConditionData): void {
     this.setConditions(
       this.selectQueryBuilder,
-      [{ columnName, operator, params }],
+      [conditionData],
       this.getWhereMethodName()
     );
   }
@@ -68,69 +66,6 @@ export class TypeormFilterBuilderAdapter<
     throw new Error("Method not implemented.");
   }
 
-  protected setConditions(
-    qb: WhereExpressionBuilder,
-    data: { columnName: string; operator: OperatorEnum; params: object }[],
-    forceWhereMethod?: "where" | "andWhere"
-  ) {
-    for (let i = 0; i < data.length; i++) {
-      let { columnName, operator, params } = data[i];
-      params = this.genUniqueParamsName(columnName, params);
-      const fieldNames = Object.keys(params);
-
-      const rightClauseCondition = this.genRightClauseCondition(
-        operator,
-        fieldNames[0],
-        fieldNames[1]
-      );
-      if (forceWhereMethod) {
-        qb[forceWhereMethod](`${columnName} ${rightClauseCondition}`, params);
-      }
-      if (i === 0) qb.where(`${columnName} ${rightClauseCondition}`, params);
-      else qb.andWhere(`${columnName} ${rightClauseCondition}`, params);
-    }
-  }
-
-  protected getWhereMethodName(): "where" | "andWhere" {
-    const methodName: "where" | "andWhere" = this.isFistWhereCondition
-      ? "where"
-      : "andWhere";
-    this.isFistWhereCondition = false;
-    return methodName;
-  }
-
-  /**
-   * Gen right clause of where clause. It depends on the operator;
-   * the structure of the right-hand side will vary
-   */
-  protected genRightClauseCondition(
-    operator: OperatorEnum,
-    param: string,
-    param2?: string
-  ): string {
-    if (operator === "ILIKE" || operator === "LIKE")
-      return `${operator} %:${param}%`;
-    if (operator === "IN") return `IN (...:${param})`;
-    if (operator === "BETWEEN") {
-      return `BETWEEN :${param} AND :${param2}`;
-    }
-    return `${operator} :${param}`;
-  }
-
-  /** Convert columnName for where-clause params */
-  protected genUniqueParamsName(columnName: string, params: any) {
-    const uniqueName = (columnName: string) => columnName + "_" + Date.now();
-
-    const newParams = Array.isArray(params)
-      ? {
-          [uniqueName(`${columnName}_1`)]: params[0],
-          [uniqueName(`${columnName}_2`)]: params[1],
-        }
-      : { [uniqueName(columnName)]: params };
-
-    return newParams;
-  }
-
   async handleRun() {
     const cloneSqlBuilder = this.selectQueryBuilder.clone();
     if (this.limit !== "*") cloneSqlBuilder.skip(this.offset).take(this.limit);
@@ -144,20 +79,20 @@ export class TypeormFilterBuilderAdapter<
     };
   }
 
-  handleJoin(dataJoin: ConditionData, required: boolean): void {
-    const joinMethod = required ? "innerJoinAndSelect" : "leftJoinAndSelect";
+  handleJoin(dataJoin: JoinData): void {
+    const joinMethod = dataJoin.required
+      ? "innerJoinAndSelect"
+      : "leftJoinAndSelect";
     this.selectQueryBuilder[joinMethod](dataJoin.path, dataJoin.path);
-    dataJoin.conditions.forEach((val) =>
-      this.handleCondition(
-        `${dataJoin.path}.${val.columnName}`,
-        val.operator,
-        val.params
-      )
-    );
+    if (dataJoin.conditions)
+      dataJoin.conditions.forEach((val) => this.handleCondition(val));
 
     // Handle select attribute
     if (dataJoin.attributes)
       this.handleSelect(dataJoin.attributes, dataJoin.path);
+
+    // Finnally, add target into this.targes
+    super.handleJoin(dataJoin);
   }
 
   getColumns(target?: any): Record<string, any> {
@@ -185,22 +120,101 @@ export class TypeormFilterBuilderAdapter<
 
     this.selectQueryBuilder[whereMethod](
       new Brackets((qb) => {
-        let subFilter = subFilters[0];
-        qb.where(
-          new Brackets((_qb) =>
-            this.setConditions(_qb, subFilter.conditionData.conditions)
-          )
-        );
+        let conditions = subFilters[0].conditionData.conditions;
+        qb.where(new Brackets((_qb) => this.setConditions(_qb, conditions)));
 
-        for (let i = 1; i < subFilters.length; i++) {
-          subFilter = subFilters[i];
+        for (let i = 1; i < subFilters.length; i++)
           qb[logicalMethod](
             new Brackets((_qb) =>
-              this.setConditions(_qb, subFilter.conditionData.conditions)
+              this.setConditions(_qb, subFilters[i].conditionData.conditions)
             )
           );
-        }
       })
     );
+  }
+
+  // ==============
+  // =======
+  // List private function for typeorm
+  // =======
+  // ==============
+
+  protected setConditions(
+    qb: WhereExpressionBuilder,
+    data: ConditionData[],
+    forceWhereMethod?: "where" | "andWhere"
+  ) {
+    let methodWhere: "where" | "andWhere" = "where";
+    for (let i = 0; i < data.length; i++) {
+      const [stringQuery, params] = this.parseCondition2Query(data[i]);
+      if (forceWhereMethod) methodWhere = forceWhereMethod;
+      else if (i === 0) methodWhere = "where";
+      else methodWhere = "andWhere";
+      qb[methodWhere](stringQuery, params);
+    }
+  }
+
+  protected getWhereMethodName(): "where" | "andWhere" {
+    const methodName: "where" | "andWhere" = this.isFistWhereCondition
+      ? "where"
+      : "andWhere";
+    this.isFistWhereCondition = false;
+    return methodName;
+  }
+
+  protected aliasColumnName(col: string, path?: string) {
+    return !path || path === "" ? col : `${path}.${col}`;
+  }
+
+  /**
+   * Parse ConditionData to Query in SelectQueryBuilder:
+   * - Format params
+   * - Gen String-query
+   */
+  protected parseCondition2Query(
+    conditionData: ConditionData
+  ): [string, object] {
+    let stringQuery = "";
+    let { columnName, operator, params, path } = conditionData;
+    params = this.formatParams(conditionData);
+    const nameParams = Object.keys(params);
+    columnName = this.aliasColumnName(columnName, path);
+
+    // Format string Query
+    if (operator === "IN") stringQuery = `${columnName} IN (...:${nameParams})`;
+    else if (operator === "BETWEEN")
+      stringQuery = `${columnName} BETWEEN :${nameParams[0]} AND :${nameParams[1]}`;
+    else stringQuery = `${columnName} ${operator} :${nameParams}`;
+    // END Format string Query
+
+    return [stringQuery, params];
+  }
+
+  /**
+   * Add Date.now() to columnName to become param's name in
+   * select builder (typeorm)
+   */
+  private uniqueName(columName: string) {
+    return columName + "_" + Date.now();
+  }
+
+  /** Convert columnName for where-clause params */
+  protected formatParams(conditionData: ConditionData) {
+    const col = this.aliasColumnName(
+      this.uniqueName(conditionData.columnName),
+      conditionData.path
+    );
+    if (
+      conditionData.operator === "BETWEEN" ||
+      (conditionData.operator !== "IN" && Array.isArray(conditionData.params))
+    )
+      return {
+        [`${col}_1`]: conditionData.params[0],
+        [`${col}_2`]: conditionData.params[1],
+      };
+    if (conditionData.operator === "ILIKE" || conditionData.operator === "LIKE")
+      return { [col]: `%${conditionData.params}%` };
+
+    return { [col]: conditionData.params };
   }
 }

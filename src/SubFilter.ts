@@ -4,28 +4,35 @@ import { Condition } from "./Condition";
 import { FilterBuilderConfig } from "./FilterBuilderConfig";
 import {
   ConditionData,
+  JoinData,
   LogicalOperator,
   OperatorEnum,
   QueryData,
 } from "./type";
 
 export class SubFilter<T> extends BaseFilter {
-  conditionData: ConditionData;
+  conditionData: JoinData;
   private readonly adapter: FilterBuilderAdapter<T>;
+
   constructor(
     queryData: QueryData,
-    target: any,
-    path: string,
-    config: FilterBuilderConfig,
-    adapter: FilterBuilderAdapter<T>
+    adapter: FilterBuilderAdapter<T>,
+    path?: string,
+    target?: any,
+    config?: FilterBuilderConfig
   ) {
     super(queryData, config);
     this.conditionData = {
-      path,
+      path: path ?? "",
       target,
       conditions: [],
     };
     this.adapter = adapter;
+
+    this.conditionData.path = path ? path : "";
+    this.conditionData.target = target
+      ? target
+      : this.adapter.getTargetByPath(this.conditionData.path);
   }
   protected processCondition(
     columnName: string,
@@ -36,6 +43,7 @@ export class SubFilter<T> extends BaseFilter {
       columnName,
       operator,
       params,
+      path: this.conditionData.path,
     });
   }
 
@@ -44,7 +52,9 @@ export class SubFilter<T> extends BaseFilter {
     if (attributes) select = attributes;
     else if (skips === "*") select = [];
     else if (skips) {
-      const columns = Object.keys(this.adapter.getColumns());
+      const columns = Object.keys(
+        this.adapter.getColumns(this.conditionData.target)
+      );
       columns.forEach((val) =>
         !skips.includes(val) ? select.push(val) : null
       );

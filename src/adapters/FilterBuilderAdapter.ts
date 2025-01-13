@@ -1,16 +1,28 @@
 import { SubFilter } from "../SubFilter";
 import {
   ConditionData,
+  JoinData,
   LogicalOperator,
   OperatorEnum,
   SortOptions,
 } from "../type";
 
-export abstract class FilterBuilderAdapter<T> {
+export abstract class FilterBuilderAdapter<Target> {
   protected offset?: number;
   protected limit: number | "*" = 10;
   protected ownerName: string;
   protected page: number = 1;
+
+  /**
+   * The hash-map contais all Target in FilterBuilder.
+   *
+   * The Target is ORM-class. It represents to a table in database.
+   * EX: With Sequelize, Target is a class extends Model. With Typeorm,
+   * Target is a Entity.
+   *
+   * Each Target is linked by path. Path has value is "", links to Main Target in FilterBuilder
+   */
+  protected targets: Record<string, Target> = {};
 
   constructor(tableName: string, page: number, limit?: number, options?: any) {
     this.ownerName = tableName;
@@ -20,6 +32,17 @@ export abstract class FilterBuilderAdapter<T> {
       this.limit = limit ?? 10;
       this.page = page ?? 1;
     }
+  }
+
+  /**
+   * Get target by path. If path = "", returns Main Target
+   * @param path
+   * @returns
+   */
+  getTargetByPath(path: string = "") {
+    const target = this.targets[path];
+    if (!target) throw new Error(`Path ${path} not exists`);
+    return target;
   }
 
   /**
@@ -38,15 +61,11 @@ export abstract class FilterBuilderAdapter<T> {
 
   /**
    * Handle where clause with Orm
-   * @param columnName ColumnName in database
-   * @param operator operator in sql
-   * @param params data of condition
+   * @param condition.columnName ColumnName in database
+   * @param condition.operator operator in sql
+   * @param condition.params data of condition
    */
-  abstract handleCondition(
-    columnName: string,
-    operator: OperatorEnum,
-    params: any
-  ): void;
+  abstract handleCondition(conditionData: ConditionData): void;
 
   /**
    * Handle order clause with Orm
@@ -65,10 +84,20 @@ export abstract class FilterBuilderAdapter<T> {
 
   abstract handleRun(): Promise<{
     total: number;
-    items: T[];
+    items: Target[];
   }>;
 
-  abstract handleJoin(dataJoin: ConditionData, required: boolean): void;
+  /**
+   * Join on Target bases dataJoin and type of ORM.
+   *
+   * Finally, add Target into Map Taget
+   * @param dataJoin
+   */
+  handleJoin(dataJoin: JoinData): void {
+    if (this.targets[dataJoin.path])
+      throw new Error(`Path [${dataJoin.path}] is duplicated!!`);
+    this.targets[dataJoin.path] = dataJoin.target;
+  }
 
   /**
    * Get column in current table

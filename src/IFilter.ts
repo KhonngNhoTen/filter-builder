@@ -163,6 +163,20 @@ export interface IFilter {
   ): this;
 
   /**
+   * This condition helps convert a string into an array of values,
+   * After, Use "IN" operator for values
+   * @param columnName Column's name need filter
+   * @param queryFieldName field in query contain string
+   * @param makeArray Function convert string to array value
+   * @returns
+   */
+  inConvertedArray(
+    queryFieldName: string,
+    makeArray: (arg: string) => Array<any>,
+    columnName?: string
+  ): this;
+
+  /**
    * Logical operator "or". List of conditions is True, if any condition is true
    * @param conditions List of condition
    */

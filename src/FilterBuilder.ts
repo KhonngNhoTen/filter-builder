@@ -17,22 +17,26 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
   private adapter: FilterBuilderAdapter<T>;
   private core: U;
 
-  constructor(core: U, queryData: QueryData, aliasTableName?: string) {
+  constructor(mainTarget: U, queryData: QueryData, aliasTableName?: string) {
     super(queryData);
     const type = this.config.type;
-    this.core = core;
-    this.adapter = this.config.factoryAdapter.create(type, this.config, {
-      core: core as any,
-      ...queryData,
+    this.core = mainTarget;
+    this.adapter = this.config.factoryAdapter.create({
+      config: this.config,
+      mainTarget: mainTarget as any,
+      type,
+      aliasTableName,
+      page: queryData?.page ?? 1,
+      limit: queryData.limit,
     });
   }
 
   protected processCondition(
-    columName: string,
+    columnName: string,
     operator: OperatorEnum,
     params: any
   ): void {
-    this.adapter.handleCondition(columName, operator, params);
+    this.adapter.handleCondition({ columnName, operator, params, path: "" });
   }
 
   /**
@@ -135,9 +139,9 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
     }
 
     return {
-      currentPage: this.queryData.page,
+      currentPage: this.queryData.page ?? 1,
       items: this.parseChunks(chunks) as any[],
-      limit: this.queryData.limit,
+      limit: this.queryData.limit ?? items.length,
       total: total,
     };
   }
@@ -172,14 +176,18 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
   ) {
     let subFilter: SubFilter<T> | undefined = undefined;
     if (target instanceof Condition)
-      subFilter = target.build(this.queryData, this.config, this.adapter);
+      subFilter = target.build({
+        queryData: this.queryData,
+        adapter: this.adapter,
+        config: this.config,
+      });
     else if (path) {
       subFilter = new SubFilter(
         this.queryData,
-        target,
+        this.adapter,
         path,
-        this.config,
-        this.adapter
+        target,
+        this.config
       );
       if (attributes) subFilter.attributes(attributes);
     }
@@ -189,7 +197,8 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
     // Run hook
     subdata = this.config.runBeforeJoin(subdata);
     // End hook
-    this.adapter.handleJoin(subdata, required);
+    subdata.required = required;
+    this.adapter.handleJoin(subdata);
   }
 
   private createChunksItems<T>(items: T[], chunkSize: number) {
