@@ -4,12 +4,17 @@
   "main": "index.js",
   "scripts": {
     "build": "rm -r ./dist & tsc",
-    "test": "npx jest"
+    "test": "npx jest",
+    "publish": "npm run build && npm publish"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["filter", "sequelize", "typeorm"],
+  "author": "KhonngNhoTen",
   "license": "ISC",
-  "description": "",
+  "description": "Plugin supports interaction between ORMs and Query-Object from the client",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KhonngNhoTen/filter-builder"
+  },  
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/sequelize": "^4.28.20",
