@@ -154,6 +154,6 @@ Sau đó cần đăng ký cho FilterBuilder biết lớp Adapter mới của b�
 
     FilterBuilderConfig.config({
         type: "custom",
-        factoryAdapter: 
+        factoryAdapter: CustomFactory
     );
 ```
