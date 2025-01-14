@@ -36,9 +36,9 @@ List of hooks:
 
    * beforeEachCondition: Array <( data: BeforeEachConditionDto ) => BeforeEachConditionDto>;
    
-   * beforeOrder?: (data: BeforeOrderHookDto) => BeforeOrderHookDto; 
+   * beforeOrder: (data: BeforeOrderHookDto) => BeforeOrderHookDto; 
    
-   * beforeGroup?: Array <(columnName: string) => string>;
+   * beforeGroup: Array <(columnName: string) => string>;
    
    * beforeJoinHook: (joinData: JoinData) => JoinData;
    
@@ -157,7 +157,7 @@ Then, you need to register your new Adapter class with **FilterBuilder**:
 
     FilterBuilderConfig.config({
         type: "custom",
-        factoryAdapter: 
+        factoryAdapter: CustomFactory
     );
 ```
 
