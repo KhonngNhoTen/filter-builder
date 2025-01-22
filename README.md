@@ -124,12 +124,41 @@ List of method in **FilterBuilder**:
 
    .run() /** Return list of Target is filted */
 
+   .transform([async () => {}]) /** Get result and modifíe them */
+```
+
+- Join methods:
+```js
+
    .leftJoin() /** Left join with other target */
 
    .rightJoin() /** Right join with other target */
 
-   .transform([async () => {}]) /** Get result and modifíe them */
 ```
+
+**NOTE:** 
+- The paths of the target must follow the correct order and should not be interrupted.
+```
+  // WRONG 
+  filterBuilder.leftJoin("student.course", Course)
+               .leftJoin("student",Student);  
+
+  // RIGHT             
+  filterBuilder.leftJoin("student",Student); 
+               .leftJoin("student.course", Course)
+               
+```
+- When using targets in Conditions, remember to use the Join methods first.
+```
+  // WRONG 
+  filterBuilder.or([new Condition("student).equal(),...])
+               .leftJoin("student",Student);  
+
+  // RIGHT             
+  filterBuilder.leftJoin("student",Student)
+               .or([new Condition("student).equal(),...])
+```
+
 
 ## Custom Filter Adapter
 Each ORM (or query builder) is defined by an Adapter. Therefore, to attach a Filter to an ORM or customize a Filter according to the user's needs, we need to define a new Adapter class, which inherits from the **FilterBuilderAdapter** class:
