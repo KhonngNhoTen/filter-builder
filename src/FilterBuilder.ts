@@ -236,6 +236,17 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
   }
 
   logicalCondition(operator: LogicalOperator, conditions: Condition[]): this {
-    throw new Error("Method not implemented.");
+    this.adapter.handleLogicalOperator(
+      operator,
+      conditions.map((condition) =>
+        condition.build({
+          queryData: this.queryData,
+          adapter: this.adapter,
+          config: this.config,
+        })
+      )
+    );
+
+    return this;
   }
 }
