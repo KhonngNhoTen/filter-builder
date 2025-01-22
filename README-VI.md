@@ -121,12 +121,43 @@ Các phương thức của FilterBuilder:
 
    .run() /** Return list of Target is filted */
 
+   .transform([async () => {}]) /** Get result and modifíe them */
+```
+
+
+- Join methods:
+```js
+
    .leftJoin() /** Left join with other target */
 
    .rightJoin() /** Right join with other target */
 
-   .transform([async () => {}]) /** Get result and modifíe them */
 ```
+
+**NOTE:** 
+- Các path của target phải theo thứ tự, không được chen ngang.
+```
+  // WRONG 
+  filterBuilder.leftJoin("student.course", Course)
+               .leftJoin("student",Student);  
+
+  // RIGHT             
+  filterBuilder.leftJoin("student",Student); 
+               .leftJoin("student.course", Course)
+               
+```
+- Khi bạn sử dụng các target trong các Condition, hãy nhớ rằng phải dùng các Join method trước.
+```
+  // WRONG 
+  filterBuilder.or([new Condition("student).equal(),...])
+               .leftJoin("student",Student);  
+
+  // RIGHT             
+  filterBuilder.leftJoin("student",Student)
+               .or([new Condition("student).equal(),...])
+```
+
+
 
 ## Custom Filter Adapter
 Mỗi một orm (hoặc query builder) được định nghĩa bằng một Adapter. Do đó, để gắng Filter cho một orm hoặc custom một Filter theo ý người dùng. Ta cần định nghĩa một lớp Adapter mới, lớp này kết thừa từ lớp **FilterBuilderAdapter**:

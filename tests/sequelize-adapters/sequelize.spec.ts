@@ -1,6 +1,6 @@
 import { SequelizeFilterBuilderAdapter } from "../../src/adapters/SequelizeFilterBuilderAdapter";
 import { SubFilter } from "../../src/SubFilter";
-import { FakeModel } from "./fake-data";
+import { FakeCourse, FakeModel, FakeStudent } from "./fake-data";
 import { FindOptions, Op } from "sequelize";
 
 describe("Testing sequelize", () => {
@@ -77,32 +77,41 @@ describe("Testing sequelize", () => {
   });
 
   describe(`3. Test findContainIncludeByPath method`, () => {
-    const includes = {
-      include: [
-        {
-          as: "student",
-          include: [
-            {
-              as: "student.course",
-            },
-          ],
-        },
-        {
-          as: "log",
-        },
-      ],
-    };
+    let _sequelizeAdapter: any = sequelizeAdapter;
+    beforeEach(() => {
+      const includes = {
+        include: [
+          {
+            as: "student",
+            include: [
+              {
+                as: "student.course",
+              },
+            ],
+          },
+          {
+            as: "log",
+          },
+        ],
+      };
+      const rootContainer = {
+        "": includes,
+        student: includes.include[0],
+        "student.course": includes.include?.[0].include?.[0],
+        log: includes.include[1],
+      };
+
+      _sequelizeAdapter = sequelizeAdapter;
+      _sequelizeAdapter.selectData = includes;
+      _sequelizeAdapter.rootContainer = rootContainer;
+    });
 
     it(`3.1 findIncludeObjectByPath log`, () => {
-      const _sequelizeAdapter: any = sequelizeAdapter;
-      _sequelizeAdapter.selectData = includes;
       const result = _sequelizeAdapter.findIncludeObjectByPath("log");
       expect(result).toEqual({ as: "log" });
     });
 
     it(`3.2 findIncludeObjectByPath student.course`, () => {
-      const _sequelizeAdapter: any = sequelizeAdapter;
-      _sequelizeAdapter.selectData = includes;
       const result =
         _sequelizeAdapter.findIncludeObjectByPath("student.course");
       expect(result).toEqual({
@@ -111,8 +120,6 @@ describe("Testing sequelize", () => {
     });
 
     it(`3.3 findIncludeObjectByPath nah (deep not found)`, () => {
-      const _sequelizeAdapter: any = sequelizeAdapter;
-      _sequelizeAdapter.selectData = includes;
       try {
         const result = _sequelizeAdapter.findIncludeObjectByPath("nah");
         expect(true).toBeFalsy();
@@ -124,8 +131,6 @@ describe("Testing sequelize", () => {
     });
 
     it(`3.4 findIncludeObjectByPath student.course.lesson (deep not found)`, () => {
-      const _sequelizeAdapter: any = sequelizeAdapter;
-      _sequelizeAdapter.selectData = includes;
       try {
         const result = _sequelizeAdapter.findIncludeObjectByPath(
           "student.course.lesson"
@@ -185,6 +190,9 @@ describe("Testing sequelize", () => {
     const select = (): any => (sequelizeAdapter as any).selectData;
     const setSelect = (val: FindOptions<any>) =>
       ((sequelizeAdapter as any).selectData = val);
+
+    const setRootContainer = (val: any) =>
+      ((sequelizeAdapter as any).rootContainer = val);
     it(`5.1 Select attribute success`, () => {
       setSelect({
         where: {},
@@ -215,29 +223,27 @@ describe("Testing sequelize", () => {
     it(`5.3 Add attribute for child IncludeObject, by path`, () => {
       // Set up selectData follow structure:
       // <Root> -> [ [Student -> Course], [User]  ]
-      setSelect({
+      const root = {
         where: {},
         include: [
           {
-            as: "student",
-            include: [{ as: "student.course" }],
-          },
-          {
-            as: "user",
+            as: "students",
+            include: [{ as: "courses" }],
           },
         ],
+      };
+      setSelect(root);
+
+      setRootContainer({
+        "": root,
+        student: root.include[0],
+        "student.courses": root.include[0].include?.[0],
       });
 
-      sequelizeAdapter.handleSelect(["id"], "student.course");
+      sequelizeAdapter.handleSelect(["id"], "student.courses");
       expect(select()?.include[0]).toEqual({
-        as: "student",
-        include: [{ as: "student.course", attributes: ["id"] }],
-      });
-
-      sequelizeAdapter.handleSelect(["id"], "user");
-      expect(select()?.include[1]).toEqual({
-        as: "user",
-        attributes: ["id"],
+        as: "students",
+        include: [{ as: "courses", attributes: ["id"] }],
       });
     });
   });
@@ -249,7 +255,14 @@ describe("Testing sequelize", () => {
     const setSelect = (val: FindOptions<any>) =>
       ((sequelizeAdapter as any).selectData = val);
 
-    setSelect({ include: [{ as: "student", include: [{ as: "course" }] }] });
+    beforeEach(() => {
+      (sequelizeAdapter as any).targets = {
+        student: FakeStudent,
+        "student.course": FakeCourse,
+        "": FakeModel,
+      };
+      setSelect({ include: [{ as: "student", include: [{ as: "course" }] }] });
+    });
 
     it(`6.1 Add logical "and"`, () => {
       setWhere({});
@@ -261,7 +274,7 @@ describe("Testing sequelize", () => {
           { id: 1, studentId: 1, page: 1 },
           sequelizeAdapter,
           "student",
-          FakeModel
+          FakeStudent
         ).equal("studentId", "id"),
       ]);
       const condition = (where() as any)[Op.and];
@@ -280,7 +293,7 @@ describe("Testing sequelize", () => {
           { id: 1, studentId: 1, page: 1 },
           sequelizeAdapter,
           "student",
-          FakeModel
+          FakeStudent
         ).equal("studentId", "id"),
       ]);
 
@@ -307,7 +320,7 @@ describe("Testing sequelize", () => {
     it(`7.1 Join simple target`, () => {
       sequelizeAdapter.handleJoin({
         path: "student",
-        target: FakeModel,
+        target: FakeStudent,
         conditions: [{ columnName: "id", operator: "=", params: 1 }],
         attributes: ["id"],
         required: true,
@@ -323,7 +336,7 @@ describe("Testing sequelize", () => {
     it(`7.2 Join deep target`, () => {
       sequelizeAdapter.handleJoin({
         path: "student",
-        target: FakeModel,
+        target: FakeStudent,
         conditions: [{ columnName: "id", operator: "=", params: 1 }],
         attributes: ["id"],
         required: true,
@@ -331,7 +344,7 @@ describe("Testing sequelize", () => {
 
       sequelizeAdapter.handleJoin({
         path: "student.course",
-        target: FakeModel,
+        target: FakeCourse,
         conditions: [{ columnName: "id", operator: "=", params: 1 }],
         attributes: ["id"],
         required: true,
@@ -345,7 +358,7 @@ describe("Testing sequelize", () => {
 
       const childIncludeObject = includeObject.include[0];
 
-      expect(childIncludeObject).toHaveProperty("as", "student.course");
+      expect(childIncludeObject).toHaveProperty("as", "courses");
       expect(childIncludeObject).toHaveProperty("where", {
         id: { [Op.eq]: 1 },
       });

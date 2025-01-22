@@ -16,15 +16,16 @@ export class Condition implements IFilter {
   target?: any;
   path?: string;
 
+  constructor();
   constructor(path: string);
   constructor(target: any, path: string);
   constructor(arg1?: unknown, arg2?: string) {
     if (arg1 && arg2) {
       this.target = arg1;
       this.path = arg2;
-    } else if (!arg1 && arg2) {
+    } else if (arg1 && !arg2) {
       this.target = undefined;
-      this.path = arg2;
+      this.path = arg1 as string;
     } else {
       this.target = undefined;
       this.path = "";
@@ -207,10 +208,9 @@ export class Condition implements IFilter {
     return this;
   }
 
-  /***
+  /**
    *  Build to Subfilter
    */
-
   build<T>(opts: BuildSubFilterOpts<T>): SubFilter<T> {
     let { adapter, queryData, config, path, target } = opts;
     target = this.target ?? target;

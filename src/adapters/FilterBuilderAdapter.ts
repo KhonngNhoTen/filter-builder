@@ -20,7 +20,12 @@ export abstract class FilterBuilderAdapter<Target> {
    * EX: With Sequelize, Target is a class extends Model. With Typeorm,
    * Target is a Entity.
    *
-   * Each Target is linked by path. Path has value is "", links to Main Target in FilterBuilder
+   * Each Target is linked by path. Path has value is "", links to Main Target in FilterBuilder.
+   *
+   * On relationship of between two targets. Target wraps other, is called Target-Container or Container.
+   * Otherhands, it is called Target-Component or Component.
+   * Main Target - is highest target, is called Root.
+   *
    */
   protected targets: Record<string, Target> = {};
 
@@ -53,13 +58,6 @@ export abstract class FilterBuilderAdapter<Target> {
   }
 
   /**
-   * Gen alias for select table
-   */
-  genAlias(path: string) {
-    return path;
-  }
-
-  /**
    * Handle where clause with Orm
    * @param condition.columnName ColumnName in database
    * @param condition.operator operator in sql
@@ -82,6 +80,9 @@ export abstract class FilterBuilderAdapter<Target> {
 
   abstract handleHaving(): void;
 
+  /**
+   * Return list of row on databases
+   */
   abstract handleRun(): Promise<{
     total: number;
     items: Target[];
@@ -91,6 +92,16 @@ export abstract class FilterBuilderAdapter<Target> {
    * Join on Target bases dataJoin and type of ORM.
    *
    * Finally, add Target into Map Taget
+   *
+   * NOTE: On relationship of between two targets. Target wraps other, is called Target-Container or Container.
+   * Otherhands, it is called Target-Component or Component.
+   * Main Target - is highest target, is called Root.
+   *
+   * Example, in bellow relationship:
+   * ```js
+   * Student.join(Course)
+   * ```
+   * `Student` is a `Container`. `Course` is a `Component`
    * @param dataJoin
    */
   handleJoin(dataJoin: JoinData): void {
