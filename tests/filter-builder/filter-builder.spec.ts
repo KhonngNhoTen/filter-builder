@@ -7,7 +7,7 @@ import {
   AdapterType,
   FilterBuilderAdapterFactoryOptions,
 } from "../../src/type";
-import { FakeModel } from "../sequelize-adapters/fake-data";
+import { FakeModel, FakeStudent } from "../sequelize-adapters/fake-data";
 import { Op } from "sequelize";
 import { Condition } from "../../src/Condition";
 
@@ -88,12 +88,12 @@ describe("Test filter builder", () => {
 
   describe("2. Test join method", () => {
     it("2.1 Left join with condition", () => {
-      filterBuilder.leftJoin(new Condition(FakeModel, "student"));
+      filterBuilder.leftJoin(new Condition(FakeStudent, "student"));
       const join = adapter.selectData;
       expect(join.include[0]).toEqual({
         required: false,
         as: "student",
-        model: FakeModel,
+        model: FakeStudent,
         where: {},
       });
     });

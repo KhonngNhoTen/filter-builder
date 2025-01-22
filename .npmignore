@@ -3,3 +3,5 @@ node_modules
 tests
 src
 tsconfig.json
+jest.config.js
+.eslintrc.json
