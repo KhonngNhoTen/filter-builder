@@ -5,24 +5,13 @@ import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
 import { FilterBuilderConfig } from "../FilterBuilderConfig";
 
 export class FilterBuilderAdapterFactory {
-  static create<T extends object>(
-    opts: FilterBuilderAdapterFactoryOptions<T>
-  ): FilterBuilderAdapter<T> {
+  static create<T extends object>(opts: FilterBuilderAdapterFactoryOptions<T>): FilterBuilderAdapter<T> {
     if (opts.type === "typeorm")
-      return new TypeormFilterBuilderAdapter(
-        opts.mainTarget,
-        opts.page,
-        opts.limit,
-        opts.aliasTableName,
-        { dataSource: opts.config.dataSource }
-      );
+      return new TypeormFilterBuilderAdapter(opts.mainTarget, opts.page, opts.limit, opts.aliasTableName, {
+        dataSource: opts.config.dataSource,
+      });
     if (opts.type === "sequelize")
-      return new SequelizeFilterBuilderAdapter(
-        opts.mainTarget,
-        opts.page,
-        opts.limit,
-        opts.aliasTableName
-      );
+      return new SequelizeFilterBuilderAdapter(opts.mainTarget, opts.page, opts.limit, opts.aliasTableName);
 
     throw new Error(`Type ${opts.type} is not supports!`);
   }

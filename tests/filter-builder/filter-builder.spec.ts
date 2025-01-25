@@ -3,10 +3,7 @@ import { FilterBuilderAdapterFactory } from "../../src/adapters/FilterBuilderAda
 import { SequelizeFilterBuilderAdapter } from "../../src/adapters/SequelizeFilterBuilderAdapter";
 import { FilterBuilderConfig } from "../../src/FilterBuilderConfig";
 import { FilterBuilder } from "../../src/FilterBuilder";
-import {
-  AdapterType,
-  FilterBuilderAdapterFactoryOptions,
-} from "../../src/type";
+import { AdapterType, FilterBuilderAdapterFactoryOptions } from "../../src/type";
 import { FakeModel, FakeStudent } from "../sequelize-adapters/fake-data";
 import { Op } from "sequelize";
 import { Condition } from "../../src/Condition";
@@ -14,14 +11,8 @@ import { Condition } from "../../src/Condition";
 FilterBuilderConfig.config({
   type: "sequelize",
   factoryAdapter: class extends FilterBuilderAdapterFactory {
-    static create<T extends object>(
-      opts: FilterBuilderAdapterFactoryOptions<T>
-    ): FilterBuilderAdapter<T> {
-      return new SequelizeFilterBuilderAdapter(
-        opts.mainTarget,
-        opts.page,
-        opts.limit
-      );
+    static create<T extends object>(opts: FilterBuilderAdapterFactoryOptions<T>): FilterBuilderAdapter<T> {
+      return new SequelizeFilterBuilderAdapter(opts.mainTarget, opts.page, opts.limit);
     }
   },
 });
@@ -45,10 +36,7 @@ describe("Test filter builder", () => {
 
     it("1.2 range method", () => {
       let query = { id1: 1, id2: 2, page: 1 };
-      filterBuilder = new FilterBuilder(FakeModel, query).range(
-        ["id1", "id2"],
-        "id"
-      );
+      filterBuilder = new FilterBuilder(FakeModel, query).range(["id1", "id2"], "id");
       const where = (filterBuilder as any).adapter.where;
       expect(where).toEqual({
         id: { [Op.between]: [1, 2] },
@@ -57,11 +45,7 @@ describe("Test filter builder", () => {
 
     it("1.3 make range method", () => {
       let query = { ids: "1,2", page: 1 };
-      filterBuilder = new FilterBuilder(FakeModel, query).makeRange(
-        "ids",
-        (str: string) => str.split(",").map((v) => +v),
-        "id"
-      );
+      filterBuilder = new FilterBuilder(FakeModel, query).makeRange("ids", (str: string) => str.split(",").map((v) => +v), "id");
       const where = (filterBuilder as any).adapter.where;
       expect(where).toEqual({
         id: { [Op.between]: [1, 2] },

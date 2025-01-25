@@ -28,185 +28,87 @@ export abstract class BaseFilter implements IFilter {
     return this;
   }
 
-  like(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  like(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator("LIKE", data.columnName, data.value);
     return this;
   }
 
-  iLike(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  iLike(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator("ILIKE", data.columnName, data.value);
     return this;
   }
 
-  equal(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  equal(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator("=", data.columnName, data.value);
     return this;
   }
 
-  less(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  less(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator("<", data.columnName, data.value);
     return this;
   }
 
-  greater(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  greater(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator(">", data.columnName, data.value);
     return this;
   }
 
-  lte(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  lte(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator("<=", data.columnName, data.value);
     return this;
   }
 
-  gte(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  gte(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator(">=", data.columnName, data.value);
     return this;
   }
 
-  in(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: Array<any>
-  ): this {
-    const data = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  in(queryFieldName: string, columnName?: string, defaultValue?: Array<any>): this {
+    const data = this.formatInputField(queryFieldName, columnName, defaultValue);
     this.binaryOperator("IN", data.columnName, data.value);
     return this;
   }
 
-  uuid(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
-    const { value, columnName: column } = this.formatInputField(
-      queryFieldName,
-      columnName,
-      defaultValue
-    );
+  uuid(queryFieldName: string, columnName?: string, defaultValue?: string): this {
+    const { value, columnName: column } = this.formatInputField(queryFieldName, columnName, defaultValue);
 
-    if (value && !Array.isArray(value) && checkUuid(value))
-      this.binaryOperator("=", column, value);
+    if (value && !Array.isArray(value) && checkUuid(value)) this.binaryOperator("=", column, value);
     else if (value && Array.isArray(value)) {
-      const checker = value.reduce(
-        (pre: boolean, crrValue: string) => pre && checkUuid(crrValue),
-        true
-      );
+      const checker = value.reduce((pre: boolean, crrValue: string) => pre && checkUuid(crrValue), true);
       if (checker) this.binaryOperator("IN", column, value);
     }
     return this;
   }
 
-  range(
-    rangeFieldName: string[],
-    columnName: string,
-    defaultValue?: Array<any>
-  ): this {
+  range(rangeFieldName: string[], columnName: string, defaultValue?: Array<any>): this {
     defaultValue = defaultValue ?? [];
-    let { value: value1, columnName: columName1 } = this.formatInputField(
-      rangeFieldName[0],
-      columnName,
-      defaultValue[0]
-    );
-    let { value: value2 } = this.formatInputField(
-      rangeFieldName[1],
-      columnName,
-      defaultValue[1]
-    );
+    let { value: value1, columnName: columName1 } = this.formatInputField(rangeFieldName[0], columnName, defaultValue[0]);
+    let { value: value2 } = this.formatInputField(rangeFieldName[1], columnName, defaultValue[1]);
 
     this.ternaryOperation(columName1, "BETWEEN", [value1, value2]);
     return this;
   }
 
-  makeRange(
-    queryFieldName: string,
-    makeArray: (arg: string) => Array<any>,
-    columnName?: string
-  ): this {
+  makeRange(queryFieldName: string, makeArray: (arg: string) => Array<any>, columnName?: string): this {
     columnName = columnName ?? queryFieldName;
     const stringArray = this.queryData[queryFieldName];
     if (stringArray) {
       const [begining, ending] = makeArray(stringArray);
       if (ending && !!!begining) this.binaryOperator("<=", columnName, ending);
-      else if (!!!ending && begining)
-        this.binaryOperator(">=", columnName, ending);
-      else if (ending && begining)
-        this.ternaryOperation(columnName, "BETWEEN", [begining, ending]);
+      else if (!!!ending && begining) this.binaryOperator(">=", columnName, ending);
+      else if (ending && begining) this.ternaryOperation(columnName, "BETWEEN", [begining, ending]);
     }
     return this;
   }
 
-  inConvertedArray(
-    queryFieldName: string,
-    makeArray: (arg: string) => Array<any>,
-    columnName?: string
-  ): this {
+  inConvertedArray(queryFieldName: string, makeArray: (arg: string) => Array<any>, columnName?: string): this {
     columnName = columnName ?? queryFieldName;
     const stringArray = this.queryData[queryFieldName];
     if (stringArray) {
@@ -225,10 +127,7 @@ export abstract class BaseFilter implements IFilter {
     return this;
   }
 
-  abstract logicalCondition(
-    operator: LogicalOperator,
-    conditions: Condition[]
-  ): this;
+  abstract logicalCondition(operator: LogicalOperator, conditions: Condition[]): this;
 
   /**
    * Set list of attribute in select-clause
@@ -257,21 +156,14 @@ export abstract class BaseFilter implements IFilter {
    * @param skips list of column needs to excludes in select-clause.
    * "*" is mean all columns
    */
-  protected abstract select(
-    attributes?: string[],
-    skips?: string[] | "*"
-  ): void;
+  protected abstract select(attributes?: string[], skips?: string[] | "*"): void;
 
   /**
    * Format value to filter.
    * If columnName is null, then using queryFieldName.
    * If query[data] is null, then using defaultValue.
    */
-  protected formatInputField(
-    queryFieldName: string,
-    column?: string,
-    defaultValue?: any
-  ): DataInputFormatted {
+  protected formatInputField(queryFieldName: string, column?: string, defaultValue?: any): DataInputFormatted {
     let value = this.queryData[queryFieldName] ?? defaultValue;
     let columnName = column ?? queryFieldName;
     if (typeof value === "string") value = value.trim();
@@ -300,32 +192,20 @@ export abstract class BaseFilter implements IFilter {
    * @param columnName array of column's name in database
    * @param value array of value for filter
    */
-  protected binaryOperator(
-    operator: OperatorEnum,
-    columnName: string,
-    value: any | any[]
-  ) {
+  protected binaryOperator(operator: OperatorEnum, columnName: string, value: any | any[]) {
     if (!value) return;
     this.saveCondition(columnName, operator, value);
   }
 
   /**
    * Main function process all ternary operation */
-  protected ternaryOperation(
-    columnName: string,
-    operator: OperatorEnum,
-    values: Array<any>
-  ) {
+  protected ternaryOperation(columnName: string, operator: OperatorEnum, values: Array<any>) {
     if (!values || !Array.isArray(values) || values.length < 2) return;
 
     this.saveCondition(columnName, operator, values);
   }
 
-  protected saveCondition(
-    columnName: string,
-    operator: OperatorEnum,
-    params: any
-  ) {
+  protected saveCondition(columnName: string, operator: OperatorEnum, params: any) {
     // Run Hooks: Before Each Condition
     const data = this.config.runBeforeEachConditionHook({
       operator,
@@ -341,9 +221,5 @@ export abstract class BaseFilter implements IFilter {
   }
 
   /** Define handle condition function */
-  protected abstract processCondition(
-    columnName: string,
-    operator: OperatorEnum,
-    params: any
-  ): void;
+  protected abstract processCondition(columnName: string, operator: OperatorEnum, params: any): void;
 }

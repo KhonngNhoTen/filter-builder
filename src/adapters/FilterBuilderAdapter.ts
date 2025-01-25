@@ -1,11 +1,5 @@
 import { SubFilter } from "../SubFilter";
-import {
-  ConditionData,
-  JoinData,
-  LogicalOperator,
-  OperatorEnum,
-  SortOptions,
-} from "../type";
+import { ConditionData, JoinData, LogicalOperator, OperatorEnum, SortOptions } from "../type";
 
 export abstract class FilterBuilderAdapter<Target> {
   protected offset?: number;
@@ -105,8 +99,7 @@ export abstract class FilterBuilderAdapter<Target> {
    * @param dataJoin
    */
   handleJoin(dataJoin: JoinData): void {
-    if (this.targets[dataJoin.path])
-      throw new Error(`Path [${dataJoin.path}] is duplicated!!`);
+    if (this.targets[dataJoin.path]) throw new Error(`Path [${dataJoin.path}] is duplicated!!`);
     this.targets[dataJoin.path] = dataJoin.target;
   }
 
@@ -128,8 +121,5 @@ export abstract class FilterBuilderAdapter<Target> {
    * @param operator
    * @param subFilters
    */
-  abstract handleLogicalOperator<U>(
-    operator: LogicalOperator,
-    subFilters: SubFilter<U>[]
-  ): void;
+  abstract handleLogicalOperator<U>(operator: LogicalOperator, subFilters: SubFilter<U>[]): void;
 }

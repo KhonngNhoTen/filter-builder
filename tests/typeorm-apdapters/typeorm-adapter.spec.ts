@@ -19,18 +19,12 @@ describe("Test typeorm adapter", () => {
     1,
     undefined,
     undefined,
-    FilterBuilderConfig.getGlobalConfig()
+    FilterBuilderConfig.getGlobalConfig(),
   );
   let qb = (typeormAdapter as any).repository.qb.data;
 
   beforeEach(() => {
-    typeormAdapter = new TypeormFilterBuilderAdapter(
-      FakeEntity,
-      1,
-      undefined,
-      undefined,
-      FilterBuilderConfig.getGlobalConfig()
-    );
+    typeormAdapter = new TypeormFilterBuilderAdapter(FakeEntity, 1, undefined, undefined, FilterBuilderConfig.getGlobalConfig());
     qb = (typeormAdapter as any).repository.qb.data;
   });
   //#endregion
@@ -84,9 +78,7 @@ describe("Test typeorm adapter", () => {
         operator: "BETWEEN",
         params: [1, 2],
       });
-      expect(qb.wheres).toEqual([
-        [`id BETWEEN :id_1 AND :id_2`, { id_1: 1, id_2: 2 }],
-      ]);
+      expect(qb.wheres).toEqual([[`id BETWEEN :id_1 AND :id_2`, { id_1: 1, id_2: 2 }]]);
     });
 
     it("2.3 Test BETWEEN+ILIKE Operator", () => {
@@ -172,17 +164,13 @@ describe("Test typeorm adapter", () => {
       typeormAdapter.handleJoin({
         path: "student",
         target: FakeEntity,
-        conditions: [
-          { columnName: "id", operator: "=", params: 1, path: "student" },
-        ],
+        conditions: [{ columnName: "id", operator: "=", params: 1, path: "student" }],
         required: true,
         attributes: ["id"],
       });
 
       expect(qb.join).toEqual([["inner", "student", "student"]]);
-      expect(qb.wheres).toEqual([
-        [`student.id = :student.id`, { [`student.id`]: 1 }],
-      ]);
+      expect(qb.wheres).toEqual([[`student.id = :student.id`, { [`student.id`]: 1 }]]);
       expect(qb.select).toEqual([["student.id"]]);
     });
 
@@ -190,17 +178,13 @@ describe("Test typeorm adapter", () => {
       typeormAdapter.handleJoin({
         path: "student",
         target: FakeEntity,
-        conditions: [
-          { columnName: "id", operator: "=", params: 1, path: "student" },
-        ],
+        conditions: [{ columnName: "id", operator: "=", params: 1, path: "student" }],
         required: false,
         attributes: ["id"],
       });
 
       expect(qb.join).toEqual([["left", "student", "student"]]);
-      expect(qb.wheres).toEqual([
-        [`student.id = :student.id`, { [`student.id`]: 1 }],
-      ]);
+      expect(qb.wheres).toEqual([[`student.id = :student.id`, { [`student.id`]: 1 }]]);
       expect(qb.select).toEqual([["student.id"]]);
     });
 
@@ -224,10 +208,7 @@ describe("Test typeorm adapter", () => {
       expect(qb.join).toEqual([["left", "student", "student"]]);
       expect(qb.wheres).toEqual([
         [`student.id = :student.id`, { [`student.id`]: 1 }],
-        [
-          `student.age BETWEEN :student.age_1 AND :student.age_2`,
-          { [`student.age_1`]: 1, [`student.age_2`]: 2 },
-        ],
+        [`student.age BETWEEN :student.age_1 AND :student.age_2`, { [`student.age_1`]: 1, [`student.age_2`]: 2 }],
       ]);
       expect(qb.select).toEqual([["student.id"]]);
     });
@@ -241,13 +222,7 @@ describe("Test typeorm adapter", () => {
     it("5.1 Test AND operator", () => {
       typeormAdapter.handleLogicalOperator("OR", [
         new SubFilter(query, typeormAdapter).gte("age"),
-        new SubFilter(
-          query,
-          typeormAdapter,
-          "student",
-          FakeEntity,
-          FilterBuilderConfig.getGlobalConfig()
-        ).gte("id"),
+        new SubFilter(query, typeormAdapter, "student", FakeEntity, FilterBuilderConfig.getGlobalConfig()).gte("id"),
       ]);
       expect(qb.wheres).toEqual([
         [`age >= :age`, { age: 1 }],

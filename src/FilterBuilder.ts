@@ -31,11 +31,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
     });
   }
 
-  protected processCondition(
-    columnName: string,
-    operator: OperatorEnum,
-    params: any
-  ): void {
+  protected processCondition(columnName: string, operator: OperatorEnum, params: any): void {
     this.adapter.handleCondition({ columnName, operator, params, path: "" });
   }
 
@@ -47,10 +43,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
    * queryFieldName is "age_sort"
    */
   order(columnName: string, sortOption?: SortOptions, queryFieldName?: string) {
-    sortOption =
-      queryFieldName && this.queryData[queryFieldName]
-        ? this.queryData[queryFieldName]
-        : sortOption;
+    sortOption = queryFieldName && this.queryData[queryFieldName] ? this.queryData[queryFieldName] : sortOption;
     if (!sortOption) return this;
     // Run hooks
     let data: BeforeOrderHookDto = { columnName, sortOption };
@@ -71,8 +64,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
    * Ex: ?sortValue=DESC  => querySortOpts is "sortValue"
    */
   orderCombineField(querySortKey: string, querySortOpts: string) {
-    if (!this.queryData[querySortKey] || !this.queryData[querySortOpts])
-      return this;
+    if (!this.queryData[querySortKey] || !this.queryData[querySortOpts]) return this;
     const columnName = this.queryData[querySortKey];
     const sortOpts = this.queryData[querySortOpts].toLocaleUpperCase();
     if (sortOpts !== "DESC" && sortOpts !== "ASC") return this;
@@ -87,10 +79,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
    * @param makeSort logic split stringOrder to sort-data
    * @returns
    */
-  orderString(
-    stringOrder: string,
-    makeSort: (str: string) => { columnName: string; opts: SortOptions }
-  ) {
+  orderString(stringOrder: string, makeSort: (str: string) => { columnName: string; opts: SortOptions }) {
     const data = makeSort(stringOrder);
     this.order(data.columnName, data.opts);
     return this;
@@ -118,20 +107,14 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
     return data;
   }
 
-  async transform<V extends any>(
-    funcs: ResultFilterTransformFuncs[],
-    chunkSize?: number
-  ): Promise<ResultFilter<V>> {
+  async transform<V extends any>(funcs: ResultFilterTransformFuncs[], chunkSize?: number): Promise<ResultFilter<V>> {
     let { items, total } = await this.adapter.handleRun();
     // Set chunkSize
     chunkSize = chunkSize ?? items.length;
     let chunks = this.createChunksItems(items, chunkSize);
 
     for (let i = 0; i < funcs.length; i++) {
-      const func =
-        funcs[i].constructor.name === "AsyncFunction"
-          ? funcs[i]
-          : async (item: any) => funcs[i](item);
+      const func = funcs[i].constructor.name === "AsyncFunction" ? funcs[i] : async (item: any) => funcs[i](item);
 
       for (let j = 0; j < chunks.length; j++) {
         chunks[j] = await this.transformChunk(chunks[j], func);
@@ -168,12 +151,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
    * @param path - path data of result filter.
    * @param attributes - attributes in table join.
    */
-  private join(
-    required: boolean,
-    target: Condition | any,
-    path?: string,
-    attributes?: string[]
-  ) {
+  private join(required: boolean, target: Condition | any, path?: string, attributes?: string[]) {
     let subFilter: SubFilter<T> | undefined = undefined;
     if (target instanceof Condition)
       subFilter = target.build({
@@ -182,13 +160,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
         config: this.config,
       });
     else if (path) {
-      subFilter = new SubFilter(
-        this.queryData,
-        this.adapter,
-        path,
-        target,
-        this.config
-      );
+      subFilter = new SubFilter(this.queryData, this.adapter, path, target, this.config);
       if (attributes) subFilter.attributes(attributes);
     }
     if (!subFilter) throw new Error("Build SubFilter is fail.");
@@ -214,10 +186,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
     return chunks.reduce((pre, val) => [...pre, ...val], []);
   }
 
-  private async transformChunk(
-    chunk: any[],
-    func: (item: any) => Promise<any>
-  ) {
+  private async transformChunk(chunk: any[], func: (item: any) => Promise<any>) {
     return await Promise.all(chunk.map(async (item) => await func(item)));
   }
 
@@ -227,9 +196,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
     else if (skips === "*") select = [];
     else if (skips) {
       const columns = Object.keys(this.adapter.getColumns());
-      columns.forEach((val) =>
-        !skips.includes(val) ? select.push(val) : null
-      );
+      columns.forEach((val) => (!skips.includes(val) ? select.push(val) : null));
     }
 
     this.adapter.handleSelect(select);
@@ -243,8 +210,8 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
           queryData: this.queryData,
           adapter: this.adapter,
           config: this.config,
-        })
-      )
+        }),
+      ),
     );
 
     return this;

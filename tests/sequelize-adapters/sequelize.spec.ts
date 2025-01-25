@@ -112,8 +112,7 @@ describe("Testing sequelize", () => {
     });
 
     it(`3.2 findIncludeObjectByPath student.course`, () => {
-      const result =
-        _sequelizeAdapter.findIncludeObjectByPath("student.course");
+      const result = _sequelizeAdapter.findIncludeObjectByPath("student.course");
       expect(result).toEqual({
         as: "student.course",
       });
@@ -124,22 +123,16 @@ describe("Testing sequelize", () => {
         const result = _sequelizeAdapter.findIncludeObjectByPath("nah");
         expect(true).toBeFalsy();
       } catch (error) {
-        expect((error as any).message).toEqual(
-          "Not found include object with path: nah"
-        );
+        expect((error as any).message).toEqual("Not found include object with path: nah");
       }
     });
 
     it(`3.4 findIncludeObjectByPath student.course.lesson (deep not found)`, () => {
       try {
-        const result = _sequelizeAdapter.findIncludeObjectByPath(
-          "student.course.lesson"
-        );
+        const result = _sequelizeAdapter.findIncludeObjectByPath("student.course.lesson");
         expect(true).toBeFalsy();
       } catch (error) {
-        expect((error as any).message).toEqual(
-          "Not found include object with path: student.course.lesson"
-        );
+        expect((error as any).message).toEqual("Not found include object with path: student.course.lesson");
       }
     });
   });
@@ -188,11 +181,9 @@ describe("Testing sequelize", () => {
 
   describe(`5. Test handleSelect method`, () => {
     const select = (): any => (sequelizeAdapter as any).selectData;
-    const setSelect = (val: FindOptions<any>) =>
-      ((sequelizeAdapter as any).selectData = val);
+    const setSelect = (val: FindOptions<any>) => ((sequelizeAdapter as any).selectData = val);
 
-    const setRootContainer = (val: any) =>
-      ((sequelizeAdapter as any).rootContainer = val);
+    const setRootContainer = (val: any) => ((sequelizeAdapter as any).rootContainer = val);
     it(`5.1 Select attribute success`, () => {
       setSelect({
         where: {},
@@ -252,8 +243,7 @@ describe("Testing sequelize", () => {
     const where = (): any => (sequelizeAdapter as any).where;
     const setWhere = (val: any) => ((sequelizeAdapter as any).where = val);
     const select = (): any => (sequelizeAdapter as any).selectData;
-    const setSelect = (val: FindOptions<any>) =>
-      ((sequelizeAdapter as any).selectData = val);
+    const setSelect = (val: FindOptions<any>) => ((sequelizeAdapter as any).selectData = val);
 
     beforeEach(() => {
       (sequelizeAdapter as any).targets = {
@@ -267,15 +257,8 @@ describe("Testing sequelize", () => {
     it(`6.1 Add logical "and"`, () => {
       setWhere({});
       sequelizeAdapter.handleLogicalOperator("AND", [
-        new SubFilter({ id: 1, studentId: 1, page: 1 }, sequelizeAdapter).equal(
-          "id"
-        ),
-        new SubFilter(
-          { id: 1, studentId: 1, page: 1 },
-          sequelizeAdapter,
-          "student",
-          FakeStudent
-        ).equal("studentId", "id"),
+        new SubFilter({ id: 1, studentId: 1, page: 1 }, sequelizeAdapter).equal("id"),
+        new SubFilter({ id: 1, studentId: 1, page: 1 }, sequelizeAdapter, "student", FakeStudent).equal("studentId", "id"),
       ]);
       const condition = (where() as any)[Op.and];
       expect(condition).not.toEqual(undefined);
@@ -286,23 +269,14 @@ describe("Testing sequelize", () => {
     it(`6.2 Combine binary and logical "Or"`, () => {
       setWhere({ name: "" });
       sequelizeAdapter.handleLogicalOperator("OR", [
-        new SubFilter({ id: 1, studentId: 1, page: 1 }, sequelizeAdapter).equal(
-          "id"
-        ),
-        new SubFilter(
-          { id: 1, studentId: 1, page: 1 },
-          sequelizeAdapter,
-          "student",
-          FakeStudent
-        ).equal("studentId", "id"),
+        new SubFilter({ id: 1, studentId: 1, page: 1 }, sequelizeAdapter).equal("id"),
+        new SubFilter({ id: 1, studentId: 1, page: 1 }, sequelizeAdapter, "student", FakeStudent).equal("studentId", "id"),
       ]);
 
       const condition = (where() as any)[Op.and];
       expect(condition).not.toEqual(undefined);
       expect(condition).toContainEqual({ name: "" });
-      const childCondtion = condition.find((e: any) => e[Op.or] !== undefined)[
-        Op.or
-      ];
+      const childCondtion = condition.find((e: any) => e[Op.or] !== undefined)[Op.or];
       expect(childCondtion).not.toEqual(undefined);
       expect(childCondtion).toContainEqual({ id: { [Op.eq]: 1 } });
       expect(childCondtion).toContainEqual({
@@ -313,8 +287,7 @@ describe("Testing sequelize", () => {
 
   describe(`7. Test handleJoin method`, () => {
     const select = (): any => (sequelizeAdapter as any).selectData;
-    const setSelect = (val: FindOptions<any>) =>
-      ((sequelizeAdapter as any).selectData = val);
+    const setSelect = (val: FindOptions<any>) => ((sequelizeAdapter as any).selectData = val);
 
     setSelect({});
     it(`7.1 Join simple target`, () => {

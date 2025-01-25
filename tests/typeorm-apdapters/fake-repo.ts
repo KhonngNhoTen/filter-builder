@@ -27,8 +27,7 @@ export class QB {
   where(brackets: Brackets): void;
   where(path: string, alias: any): void;
   where(arg1: unknown, arg2?: any): void {
-    if (typeof arg1 === "string")
-      if (this.data.wheres) this.data.wheres.push([arg1, arg2]);
+    if (typeof arg1 === "string") if (this.data.wheres) this.data.wheres.push([arg1, arg2]);
     if (arg1 instanceof Brackets) {
       const that = this;
       arg1.whereFactory(that as any);
