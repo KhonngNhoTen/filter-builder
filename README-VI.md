@@ -188,3 +188,6 @@ Sau đó cần đăng ký cho FilterBuilder biết lớp Adapter mới của b�
         factoryAdapter: CustomFactory
     );
 ```
+
+Example:
+- [Sequelize + Filter Builder js](https://github.com/KhonngNhoTen/sequelize-filter-builder-js-example)

@@ -190,7 +190,8 @@ Then, you need to register your new Adapter class with **FilterBuilder**:
     );
 ```
 
-
+Example:
+- [Sequelize + Filter Builder js](https://github.com/KhonngNhoTen/sequelize-filter-builder-js-example)
 
 
 
