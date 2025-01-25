@@ -5,9 +5,12 @@
   "scripts": {
     "build": "rm -r ./dist & tsc",
     "test": "npx jest",
-    "publish": "npm test && npm run build && npm publish --access public"
+    "publish": "npm run format && npm test && npm run build && npm publish --access public",
+    "format": "npx prettier --write \"./**/*.{js,jsx,mjs,cjs,ts,tsx,json}\""
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "types": "dist/type.d.ts",
   "keywords": [
     "filter",

@@ -48,13 +48,8 @@ export class FilterBuilderConfig {
     if (options.hooks) this.hooks = options.hooks;
   }
 
-  runBeforeEachConditionHook(
-    data: BeforeEachConditionDto
-  ): BeforeEachConditionDto {
-    if (
-      this.hooks?.beforeEachCondition &&
-      Array.isArray(this.hooks?.beforeEachCondition)
-    ) {
+  runBeforeEachConditionHook(data: BeforeEachConditionDto): BeforeEachConditionDto {
+    if (this.hooks?.beforeEachCondition && Array.isArray(this.hooks?.beforeEachCondition)) {
       for (let i = 0; i < this.hooks.beforeEachCondition.length; i++) {
         const hook = this.hooks.beforeEachCondition[i];
         data = hook(data);
@@ -64,8 +59,7 @@ export class FilterBuilderConfig {
   }
 
   runGetColumnNameHook(data: GetColumnNameHookDto) {
-    if (this.hooks && this.hooks?.getColumnName)
-      return this.hooks.getColumnName(data);
+    if (this.hooks && this.hooks?.getColumnName) return this.hooks.getColumnName(data);
     return data;
   }
 
@@ -86,8 +80,7 @@ export class FilterBuilderConfig {
   }
 
   runBeforeJoin(joinData: JoinData) {
-    if (this.hooks?.beforeJoinHook)
-      joinData = this.hooks?.beforeJoinHook(joinData);
+    if (this.hooks?.beforeJoinHook) joinData = this.hooks?.beforeJoinHook(joinData);
     return joinData;
   }
 }

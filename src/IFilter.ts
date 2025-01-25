@@ -10,11 +10,7 @@ export interface IFilter {
    * @param columnName column's name of table
    * @returns
    */
-  like(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this;
+  like(queryFieldName: string, columnName?: string, defaultValue?: string): this;
 
   /**
    * Add iLike condition to where-clause of query string. Use "ILIKE" operator.
@@ -25,11 +21,7 @@ export interface IFilter {
    * @param columnName column's name of table
    * @returns
    */
-  iLike(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this;
+  iLike(queryFieldName: string, columnName?: string, defaultValue?: string): this;
   /**
    * Add iLike condition to where-clause of query string. Use "=" operator.
    *  If value is undefine (not exists in query) and defaultValue is not set,
@@ -39,11 +31,7 @@ export interface IFilter {
    * @param columnName column's name of table
    * @returns
    */
-  equal(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this;
+  equal(queryFieldName: string, columnName?: string, defaultValue?: string): this;
 
   /**
    * Add less <value>-condition to where-clause of query string. Use "<" operator.
@@ -54,11 +42,7 @@ export interface IFilter {
    * @param columnName column's name of table
    * @returns
    */
-  less(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this;
+  less(queryFieldName: string, columnName?: string, defaultValue?: string): this;
 
   /**
    * Add greater <value>-condition to where-clause of query string. Use ">" operator.
@@ -69,11 +53,7 @@ export interface IFilter {
    * @param columnName column's name of table
    * @returns
    */
-  greater(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this;
+  greater(queryFieldName: string, columnName?: string, defaultValue?: string): this;
 
   /**
    * Add less or equal <value>-condition to where-clause of query string. Use "<=" operator.
@@ -106,11 +86,7 @@ export interface IFilter {
    * @param columnName column's name of table
    * @returns
    */
-  in(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: Array<any>
-  ): this;
+  in(queryFieldName: string, columnName?: string, defaultValue?: Array<any>): this;
 
   /**
    * Condition with uuid.
@@ -118,11 +94,7 @@ export interface IFilter {
    * If value is array of uuid. Where-clause use "IN" operator.
    * If value is single of uuid. Where-clause use "=" operator.
    */
-  uuid(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this;
+  uuid(queryFieldName: string, columnName?: string, defaultValue?: string): this;
 
   /**
    * This condition filter a field from the beginning value to the ending value.
@@ -138,11 +110,7 @@ export interface IFilter {
    * Includes begining value and ending value
    * @returns
    */
-  range(
-    rangeFieldName: string[],
-    columnName: string,
-    defaultValue?: Array<any>
-  ): this;
+  range(rangeFieldName: string[], columnName: string, defaultValue?: Array<any>): this;
 
   /**
    * This condition helps convert a string into an array of values,
@@ -156,11 +124,7 @@ export interface IFilter {
    * @param makeArray Function convert string to array value
    * @returns
    */
-  makeRange(
-    queryFieldName: string,
-    makeArray: (arg: string) => Array<any>,
-    columnName?: string
-  ): this;
+  makeRange(queryFieldName: string, makeArray: (arg: string) => Array<any>, columnName?: string): this;
 
   /**
    * This condition helps convert a string into an array of values,
@@ -170,11 +134,7 @@ export interface IFilter {
    * @param makeArray Function convert string to array value
    * @returns
    */
-  inConvertedArray(
-    queryFieldName: string,
-    makeArray: (arg: string) => Array<any>,
-    columnName?: string
-  ): this;
+  inConvertedArray(queryFieldName: string, makeArray: (arg: string) => Array<any>, columnName?: string): this;
 
   /**
    * Logical operator "or". List of conditions is True, if any condition is true

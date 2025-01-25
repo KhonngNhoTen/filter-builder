@@ -48,11 +48,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  like(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  like(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "like",
       params: [queryFieldName, columnName, defaultValue],
@@ -60,11 +56,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  iLike(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  iLike(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "iLike",
       params: [queryFieldName, columnName, defaultValue],
@@ -72,11 +64,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  inConvertedArray(
-    queryFieldName: string,
-    makeArray: (arg: string) => Array<any>,
-    columnName?: string
-  ): this {
+  inConvertedArray(queryFieldName: string, makeArray: (arg: string) => Array<any>, columnName?: string): this {
     this.funcs.push({
       funcs: "inConvertedArray",
       params: [queryFieldName, makeArray, columnName],
@@ -84,11 +72,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  equal(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  equal(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "equal",
       params: [queryFieldName, columnName, defaultValue],
@@ -96,11 +80,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  less(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  less(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "less",
       params: [queryFieldName, columnName, defaultValue],
@@ -108,11 +88,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  greater(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  greater(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "greater",
       params: [queryFieldName, columnName, defaultValue],
@@ -120,11 +96,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  lte(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  lte(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "lte",
       params: [queryFieldName, columnName, defaultValue],
@@ -132,11 +104,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  gte(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  gte(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "gte",
       params: [queryFieldName, columnName, defaultValue],
@@ -144,11 +112,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  in(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: Array<any>
-  ): this {
+  in(queryFieldName: string, columnName?: string, defaultValue?: Array<any>): this {
     this.funcs.push({
       funcs: "in",
       params: [queryFieldName, columnName, defaultValue],
@@ -156,11 +120,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  uuid(
-    queryFieldName: string,
-    columnName?: string,
-    defaultValue?: string
-  ): this {
+  uuid(queryFieldName: string, columnName?: string, defaultValue?: string): this {
     this.funcs.push({
       funcs: "uuid",
       params: [queryFieldName, columnName, defaultValue],
@@ -168,11 +128,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  range(
-    rangeFieldName: string[],
-    columnName: string,
-    defaultValue?: Array<any>
-  ): this {
+  range(rangeFieldName: string[], columnName: string, defaultValue?: Array<any>): this {
     this.funcs.push({
       funcs: "range",
       params: [rangeFieldName, columnName, defaultValue],
@@ -180,11 +136,7 @@ export class Condition implements IFilter {
     return this;
   }
 
-  makeRange(
-    queryFieldName: string,
-    makeArray: (arg: string) => Array<any>,
-    columnName?: string
-  ): this {
+  makeRange(queryFieldName: string, makeArray: (arg: string) => Array<any>, columnName?: string): this {
     this.funcs.push({
       funcs: "makeRange",
       params: [queryFieldName, makeArray, columnName],
