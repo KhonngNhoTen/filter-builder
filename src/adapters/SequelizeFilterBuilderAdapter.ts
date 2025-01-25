@@ -1,21 +1,7 @@
 import { SubFilter } from "../SubFilter";
-import {
-  ConditionData,
-  JoinData,
-  LogicalOperator,
-  OperatorEnum,
-  SortOptions,
-} from "../type";
+import { ConditionData, JoinData, LogicalOperator, OperatorEnum, SortOptions } from "../type";
 import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
-import {
-  Op,
-  FindOptions,
-  IncludeOptions,
-  where,
-  Model,
-  WhereOptions,
-  Includeable,
-} from "sequelize";
+import { Op, FindOptions, IncludeOptions, where, Model, WhereOptions, Includeable } from "sequelize";
 
 type MyFindOptions<T> = Omit<FindOptions, "include"> & {
   include?: IncludeOptions[];
@@ -62,10 +48,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
 
   handleOrder(columName: string, sortOpts: SortOptions): void {
     if (!this.selectData?.order) this.selectData.order = [];
-    (this.selectData.order as [string, string][]).push([
-      columName,
-      sortOpts as string,
-    ]);
+    (this.selectData.order as [string, string][]).push([columName, sortOpts as string]);
   }
 
   handleGroup(columnName: string): void {
@@ -80,32 +63,23 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
     if (!this?.selectData.include) this.selectData.include = [];
     const path = dataJoin.path;
     const lastDotPosition = path.lastIndexOf(".");
-    const alias = this.getAlias(
-      lastDotPosition === -1 ? "" : path.slice(0, lastDotPosition),
-      dataJoin.target
-    );
+    const sequelizeAlias = new SequelizeAlias(this.targets as any, dataJoin.path, dataJoin.target);
     const component: IncludeOptions = {
       required: dataJoin.required,
-      as: alias,
+      as: sequelizeAlias.alias,
       model: dataJoin.target,
       where: {},
     };
 
     // Add condition into component-clause
-    if (dataJoin.conditions)
-      component.where = this.parseConditions(dataJoin.conditions);
-    let container: any =
-      lastDotPosition === -1
-        ? this.selectData
-        : this.findIncludeObjectByPath(path.slice(0, lastDotPosition));
+    if (dataJoin.conditions) component.where = this.parseConditions(dataJoin.conditions);
+    let container: any = lastDotPosition === -1 ? this.selectData : this.findIncludeObjectByPath(path.slice(0, lastDotPosition));
 
     if (container && !container?.include) container.include = [component];
-    else if (container && Array.isArray(container.include))
-      container.include.push(component);
+    else if (container && Array.isArray(container.include)) container.include.push(component);
 
     // Handle select attributes
-    if (dataJoin.attributes)
-      this.handleSelect(dataJoin.attributes, undefined, component);
+    if (dataJoin.attributes) this.handleSelect(dataJoin.attributes, undefined, component);
 
     // Disable subQuery
     this.selectData.subQuery = false;
@@ -125,39 +99,29 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
     return dataValues;
   }
 
-  handleSelect(
-    attribute: string[],
-    path?: string,
-    includeObject?: IncludeOptions | FindOptions<any>
-  ): void {
+  handleSelect(attribute: string[], path?: string, includeObject?: IncludeOptions | FindOptions<any>): void {
     if (path) includeObject = this.findIncludeObjectByPath(path);
     else if (!includeObject) includeObject = this.selectData;
 
-    if (includeObject.attributes && Array.isArray(includeObject.attributes))
-      includeObject.attributes.push(...attribute);
+    if (includeObject.attributes && Array.isArray(includeObject.attributes)) includeObject.attributes.push(...attribute);
     else includeObject.attributes = attribute;
   }
 
-  handleLogicalOperator<U>(
-    operator: LogicalOperator,
-    subFilters: SubFilter<U>[]
-  ): void {
+  handleLogicalOperator<U>(operator: LogicalOperator, subFilters: SubFilter<U>[]): void {
     const op = operator === "AND" ? Op.and : Op.or;
     const conditions: any[] = [];
     for (let i = 0; i < subFilters.length; i++) {
-      const conditionData = subFilters[i].conditionData;
-      if (conditionData.path === "" && conditionData.conditions)
-        conditions.push(this.parseConditions(conditionData.conditions));
-      else if (conditionData.conditions) {
-        conditions.push(
-          this.parseConditions(
-            conditionData.conditions.map((val) => ({
-              ...val,
-              columnName: `$${this.path2Alias(val.path)}.${val.columnName}$`,
-            }))
-          )
-        );
+      let conditionData = subFilters[i].conditionData.conditions;
+      const isRoot = subFilters[i].conditionData.path === "";
+      if (!isRoot) {
+        const sequelizeAlias = new SequelizeAlias(this.targets as any, subFilters[i].conditionData.path);
+        conditionData = conditionData.map((e) => ({
+          ...e,
+          columnName: `$${sequelizeAlias.deepAlias}.${e.columnName}$`,
+        }));
       }
+
+      conditions.push(this.parseConditions(conditionData));
     }
     this.where = this.concatLogicalWhere(this.where, { [op]: conditions });
   }
@@ -178,9 +142,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
       where: this.where,
       distinct: true,
     }) as unknown as number;
-    const findMany = (this.model as any).findAll(
-      dataSelect
-    ) as unknown as any[];
+    const findMany = (this.model as any).findAll(dataSelect) as unknown as any[];
 
     const [total, items] = await Promise.all([countFunc, findMany]);
 
@@ -192,44 +154,6 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
   //  Function of Sequelize Adapter
   //
   //
-
-  /**
-   * Get alias name of `Componet` by `Container`.
-   *
-   * On Sequelize, alias name is set in association of Model. Example:
-   * ```js
-   * Student.belongsTo(Course, {as: "course"}).
-   * ```
-   * Alias name of Course on relationship between Student and Course is `course`.
-   */
-  getAlias(component: typeof Model): string;
-  getAlias(componentPath: string): string;
-  getAlias(containerPath: string, component: typeof Model): string;
-  getAlias(
-    containerTarget: typeof Model,
-    componentTarget: typeof Model
-  ): string;
-  getAlias(containerTarget: typeof Model, componentPath: string): string;
-  getAlias(containerPath: string, componentPath: string): string;
-
-  getAlias(arg1: unknown, arg2?: unknown): string {
-    let container: typeof Model, component: typeof Model;
-
-    if (!arg2) container = this.targets[""] as typeof Model;
-    else if (typeof arg1 === "string")
-      container = this.targets[arg1] as typeof Model;
-    else container = arg1 as typeof Model;
-
-    if (!arg2) component = this.targets[arg1 as string] as typeof Model;
-    else if (typeof arg2 === "string")
-      component = this.targets[arg2] as typeof Model;
-    else component = arg2 as typeof Model;
-
-    for (const [as, model] of Object.entries(container.associations)) {
-      if (model.target.tableName === component.tableName) return model.as;
-    }
-    throw new Error("Not found Component");
-  }
 
   /**
    * Convert OperatorEnum to Op in Sequelize. And set params for fields
@@ -263,10 +187,6 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
    */
   parseConditions(conditions: ConditionData[]) {
     return conditions.reduce((pre, e) => {
-      /**
-       * Set column name in where'clause of sequelize
-       * If target path
-       */
       const columnName = e.columnName;
       return {
         ...pre,
@@ -286,29 +206,8 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
    * @returns
    */
   findIncludeObjectByPath(path: string) {
-    // if (!Array.isArray(path)) path = path.split(".");
-    // let currentAlias = "";
-    // let current: IncludeOptions | null = this.selectData;
-    // for (let i = 0; i < path.length; i++) {
-    //   const joinName = path[i];
-    //   currentAlias =
-    //     currentAlias === "" ? joinName : `${currentAlias}.${joinName}`;
-    //   let find;
-    //   if (
-    //     !current?.include ||
-    //     (find = current.include.findIndex(
-    //       (val: any) => val.as === currentAlias
-    //     )) === -1
-    //   ) {
-    //     current = null;
-    //     break;
-    //   }
-    //   current = current.include[find] as IncludeOptions;
-    // }
-
     const current = this.rootContainer[path];
-    if (!current)
-      throw new Error("Not found include object with path: " + path);
+    if (!current) throw new Error("Not found include object with path: " + path);
     return current;
   }
 
@@ -318,35 +217,92 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
    */
   private concatLogicalWhere(whereClause: any, conditions: any) {
     const isEmpty = (obj: any) => Object.entries(obj).length === 0;
-    const isLogicOperator = (obj: any): boolean =>
-      obj[Op.and] !== undefined || obj[Op.or] !== undefined;
+    const isLogicOperator = (obj: any): boolean => obj[Op.and] !== undefined || obj[Op.or] !== undefined;
 
-    if (isEmpty(whereClause) && !isLogicOperator(whereClause))
-      return conditions;
+    if (isEmpty(whereClause) && !isLogicOperator(whereClause)) return conditions;
 
     return {
       [Op.and]: [
-        ...(!isLogicOperator(whereClause)
-          ? Object.keys(whereClause).map((key) => ({ [key]: whereClause[key] }))
-          : [whereClause]),
+        ...(!isLogicOperator(whereClause) ? Object.keys(whereClause).map((key) => ({ [key]: whereClause[key] })) : [whereClause]),
         conditions,
       ],
     };
   }
+}
+class SequelizeAlias {
+  deepAlias: string;
+  alias?: string;
 
-  private path2Alias(path?: string) {
+  private targets: Record<string, typeof Model>;
+
+  constructor(targets: Record<string, typeof Model>, path: string, component?: typeof Model) {
+    this.targets = targets;
+    if (component) {
+      const lastDotPosition = path.lastIndexOf(".");
+      this.alias = this.getAlias(lastDotPosition === -1 ? "" : path.slice(0, lastDotPosition), component);
+    }
+
+    this.deepAlias = this.getDeepAlias(path);
+  }
+
+  /**
+   * Get alias name of `Componet` by `Container`.
+   *
+   * On Sequelize, alias name is set in association of Model. Example:
+   * ```js
+   * Student.belongsTo(Course, {as: "course"}).
+   * ```
+   * Alias name of Course on relationship between Student and Course is `course`.
+   */
+  private getAlias(containerPath: string, component: typeof Model): string;
+  private getAlias(containerTarget: typeof Model, componentTarget: typeof Model): string;
+  private getAlias(containerPath: string, componentPath: string): string;
+  private getAlias(arg1: unknown, arg2?: unknown): string {
+    let container: typeof Model, component: typeof Model;
+
+    if (!arg2) container = this.targets[""] as typeof Model;
+    else if (typeof arg1 === "string") container = this.targets[arg1] as typeof Model;
+    else container = arg1 as typeof Model;
+
+    if (!arg2) component = this.targets[arg1 as string] as typeof Model;
+    else if (typeof arg2 === "string") component = this.targets[arg2] as typeof Model;
+    else component = arg2 as typeof Model;
+    for (const [as, model] of Object.entries(container.associations)) {
+      if (model.target.tableName === component.tableName) return model.as;
+    }
+    throw new Error("Not found Component");
+  }
+
+  /**
+   * Gen deep alias for component in relationship between two targets.
+   *
+   * Ex:
+   * ```js
+   * Student.hasMany("Course", {as: "courses"});
+   * Course.hasMany("Lesson", {as: "lessons"});
+   * ```
+   * Deep alias `lesson` is `courses.lessons`
+   */
+
+  private getDeepAlias(path?: string) {
     if (!path || path === "") return "";
     const paths = path.split(".");
     let containerPath = "";
     let newContainerPath = "";
-    return paths.reduce((init, val) => {
-      newContainerPath = containerPath === "" ? val : containerPath + "." + val;
-      init =
-        init === ""
-          ? this.getAlias(containerPath, newContainerPath)
-          : init + "." + this.getAlias(containerPath, newContainerPath);
-      containerPath = newContainerPath;
-      return init;
-    }, "");
+    let deepAlias = "";
+    for (let i = 0; i < paths.length; i++) {
+      try {
+        newContainerPath = containerPath === "" ? paths[i] : containerPath + "." + paths[i];
+        deepAlias =
+          deepAlias === ""
+            ? this.getAlias(containerPath, newContainerPath)
+            : deepAlias + "." + this.getAlias(containerPath, newContainerPath);
+        containerPath = newContainerPath;
+      } catch (error) {
+        return "";
+      }
+    }
+
+    return deepAlias;
   }
 }
