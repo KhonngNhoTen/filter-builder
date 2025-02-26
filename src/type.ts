@@ -85,6 +85,7 @@ export type JoinData = {
   conditions: ConditionData[];
   attributes?: string[];
   required?: boolean;
+  shortPath?: string;
 };
 export type ConditionData = {
   columnName: string;

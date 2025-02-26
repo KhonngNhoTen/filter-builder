@@ -1,5 +1,6 @@
 import { SubFilter } from "../SubFilter";
 import { ConditionData, JoinData, LogicalOperator, OperatorEnum, SortOptions } from "../type";
+import { OrmRelationshipManagement } from "./OrmRelationshipManagement";
 
 export abstract class FilterBuilderAdapter<Target> {
   protected offset?: number;
@@ -7,25 +8,11 @@ export abstract class FilterBuilderAdapter<Target> {
   protected ownerName: string;
   protected page: number = 1;
 
-  /**
-   * The hash-map contais all Target in FilterBuilder.
-   *
-   * The Target is ORM-class. It represents to a table in database.
-   * EX: With Sequelize, Target is a class extends Model. With Typeorm,
-   * Target is a Entity.
-   *
-   * Each Target is linked by path. Path has value is "", links to Main Target in FilterBuilder.
-   *
-   * On relationship of between two targets. Target wraps other, is called Target-Container or Container.
-   * Otherhands, it is called Target-Component or Component.
-   * Main Target - is highest target, is called Root.
-   *
-   */
-  protected targets: Record<string, Target> = {};
-
-  constructor(tableName: string, page: number, limit?: number, options?: any) {
+  protected relationMangement: OrmRelationshipManagement;
+  constructor(relationMangement: OrmRelationshipManagement, tableName: string, page: number, limit?: number, options?: any) {
     this.ownerName = tableName;
     this.page = page;
+    this.relationMangement = relationMangement;
     if (limit) {
       this.offset = page ? (page - 1) * limit : 0;
       this.limit = limit ?? 10;
@@ -39,8 +26,16 @@ export abstract class FilterBuilderAdapter<Target> {
    * @returns
    */
   getTargetByPath(path: string = "") {
-    const target = this.targets[path];
-    if (!target) throw new Error(`Path ${path} not exists`);
+    let target = this.relationMangement.findPath(path).value;
+    if (!target) {
+      target = this.getTargetByShortPath(path);
+    }
+    return target;
+  }
+
+  getTargetByShortPath(shortPath: string) {
+    const shortPathResult = this.relationMangement.findShortPath(shortPath);
+    const target = shortPathResult ? shortPathResult.value : null;
     return target;
   }
 
@@ -98,10 +93,7 @@ export abstract class FilterBuilderAdapter<Target> {
    * `Student` is a `Container`. `Course` is a `Component`
    * @param dataJoin
    */
-  handleJoin(dataJoin: JoinData): void {
-    if (this.targets[dataJoin.path]) throw new Error(`Path [${dataJoin.path}] is duplicated!!`);
-    this.targets[dataJoin.path] = dataJoin.target;
-  }
+  handleJoin(dataJoin: JoinData): void {}
 
   /**
    * Get column in current table

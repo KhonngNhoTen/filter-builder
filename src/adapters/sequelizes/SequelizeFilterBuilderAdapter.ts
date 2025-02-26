@@ -1,7 +1,8 @@
-import { SubFilter } from "../SubFilter";
-import { ConditionData, JoinData, LogicalOperator, OperatorEnum, SortOptions } from "../type";
-import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
+import { SubFilter } from "../../SubFilter";
+import { ConditionData, JoinData, LogicalOperator, OperatorEnum, SortOptions } from "../../type";
+import { FilterBuilderAdapter } from "../FilterBuilderAdapter";
 import { Op, FindOptions, IncludeOptions, where, Model, WhereOptions, Includeable } from "sequelize";
+import { SequelizeRelationshipManagement } from "./SequelizeRelationshipManagement";
 
 type MyFindOptions<T> = Omit<FindOptions, "include"> & {
   include?: IncludeOptions[];
@@ -12,7 +13,6 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
   protected readonly model: T;
   protected myName: string;
   protected dataJoinMap: any = {};
-
   protected where: WhereOptions<T> = {};
   /**
    * On relationship of between two targets. Target wraps other, is called Target-Container or Container.
@@ -30,11 +30,12 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
 
   constructor(model: T, page: number, limit?: number, alias?: string) {
     const tableName = (model as any).tableName;
-    super(tableName, page, limit);
+    super(new SequelizeRelationshipManagement(), tableName, page, limit);
+    this.relationMangement.init(model);
+
     this.model = model as any;
     this.myName = (model as any).name ?? alias;
     this.dataJoinMap = { [alias ?? tableName]: undefined };
-    this.targets[""] = model;
     this.rootContainer = { "": {} };
   }
 
@@ -63,7 +64,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
     if (!this?.selectData.include) this.selectData.include = [];
     const path = dataJoin.path;
     const lastDotPosition = path.lastIndexOf(".");
-    const sequelizeAlias = new SequelizeAlias(this.targets as any, dataJoin.path, dataJoin.target);
+    const sequelizeAlias = this.relationMangement.addRelationship(dataJoin.path, dataJoin.target);
     const component: IncludeOptions = {
       required: dataJoin.required,
       as: sequelizeAlias.alias,
@@ -86,9 +87,6 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
 
     // Add Component into Container
     this.rootContainer[path] = component;
-
-    // Finnally, add target into this.targets
-    super.handleJoin(dataJoin);
   }
 
   getColumns(target?: any): Record<string, any> {
@@ -114,7 +112,7 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
       let conditionData = subFilters[i].conditionData.conditions;
       const isRoot = subFilters[i].conditionData.path === "";
       if (!isRoot) {
-        const sequelizeAlias = new SequelizeAlias(this.targets as any, subFilters[i].conditionData.path);
+        const sequelizeAlias = this.relationMangement.findPath(subFilters[i].conditionData.path);
         conditionData = conditionData.map((e) => ({
           ...e,
           columnName: `$${sequelizeAlias.deepAlias}.${e.columnName}$`,
@@ -227,82 +225,5 @@ export class SequelizeFilterBuilderAdapter<T> extends FilterBuilderAdapter<T> {
         conditions,
       ],
     };
-  }
-}
-class SequelizeAlias {
-  deepAlias: string;
-  alias?: string;
-
-  private targets: Record<string, typeof Model>;
-
-  constructor(targets: Record<string, typeof Model>, path: string, component?: typeof Model) {
-    this.targets = targets;
-    if (component) {
-      const lastDotPosition = path.lastIndexOf(".");
-      this.alias = this.getAlias(lastDotPosition === -1 ? "" : path.slice(0, lastDotPosition), component);
-    }
-
-    this.deepAlias = this.getDeepAlias(path);
-  }
-
-  /**
-   * Get alias name of `Componet` by `Container`.
-   *
-   * On Sequelize, alias name is set in association of Model. Example:
-   * ```js
-   * Student.belongsTo(Course, {as: "course"}).
-   * ```
-   * Alias name of Course on relationship between Student and Course is `course`.
-   */
-  private getAlias(containerPath: string, component: typeof Model): string;
-  private getAlias(containerTarget: typeof Model, componentTarget: typeof Model): string;
-  private getAlias(containerPath: string, componentPath: string): string;
-  private getAlias(arg1: unknown, arg2?: unknown): string {
-    let container: typeof Model, component: typeof Model;
-
-    if (!arg2) container = this.targets[""] as typeof Model;
-    else if (typeof arg1 === "string") container = this.targets[arg1] as typeof Model;
-    else container = arg1 as typeof Model;
-
-    if (!arg2) component = this.targets[arg1 as string] as typeof Model;
-    else if (typeof arg2 === "string") component = this.targets[arg2] as typeof Model;
-    else component = arg2 as typeof Model;
-    for (const [as, model] of Object.entries(container.associations)) {
-      if (model.target.tableName === component.tableName) return model.as;
-    }
-    throw new Error("Not found Component");
-  }
-
-  /**
-   * Gen deep alias for component in relationship between two targets.
-   *
-   * Ex:
-   * ```js
-   * Student.hasMany("Course", {as: "courses"});
-   * Course.hasMany("Lesson", {as: "lessons"});
-   * ```
-   * Deep alias `lesson` is `courses.lessons`
-   */
-
-  private getDeepAlias(path?: string) {
-    if (!path || path === "") return "";
-    const paths = path.split(".");
-    let containerPath = "";
-    let newContainerPath = "";
-    let deepAlias = "";
-    for (let i = 0; i < paths.length; i++) {
-      try {
-        newContainerPath = containerPath === "" ? paths[i] : containerPath + "." + paths[i];
-        deepAlias =
-          deepAlias === ""
-            ? this.getAlias(containerPath, newContainerPath)
-            : deepAlias + "." + this.getAlias(containerPath, newContainerPath);
-        containerPath = newContainerPath;
-      } catch (error) {
-        return "";
-      }
-    }
-
-    return deepAlias;
   }
 }

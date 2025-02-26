@@ -15,11 +15,12 @@ export class Condition implements IFilter {
   private funcs: { funcs: keyof IFilter; params: any[] }[];
   target?: any;
   path?: string;
+  shortPath?: string;
 
   constructor();
   constructor(path: string);
-  constructor(target: any, path: string);
-  constructor(arg1?: unknown, arg2?: string) {
+  constructor(target: any, path: string, shortPath?: string);
+  constructor(arg1?: unknown, arg2?: string, shortPath?: string) {
     if (arg1 && arg2) {
       this.target = arg1;
       this.path = arg2;
@@ -31,6 +32,7 @@ export class Condition implements IFilter {
       this.path = "";
     }
     this.funcs = [];
+    this.shortPath = shortPath;
   }
 
   attributes(attributes: string[]): this {
@@ -164,12 +166,13 @@ export class Condition implements IFilter {
    *  Build to Subfilter
    */
   build<T>(opts: BuildSubFilterOpts<T>): SubFilter<T> {
+    // eslint-disable-next-line prefer-const
     let { adapter, queryData, config, path, target } = opts;
     target = this.target ?? target;
     path = this.path ?? path;
     if (!config) config = FilterBuilderConfig.getGlobalConfig();
 
-    const subFilter = new SubFilter(queryData, adapter, path, target, config);
+    const subFilter = new SubFilter(queryData, adapter, path, target, this.shortPath, config);
     this.funcs.forEach((val) => {
       (subFilter[val.funcs] as any)(...val.params);
     });

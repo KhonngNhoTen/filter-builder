@@ -1,8 +1,7 @@
 import { AdapterType, FilterBuilderAdapterFactoryOptions } from "../type";
-import { SequelizeFilterBuilderAdapter } from "./SequelizeFilterBuilderAdapter";
-import { TypeormFilterBuilderAdapter } from "./TypeormFilterBuilderAdapter";
+import { SequelizeFilterBuilderAdapter } from "./sequelizes/SequelizeFilterBuilderAdapter";
+import { TypeormFilterBuilderAdapter } from "./typeorm/TypeormFilterBuilderAdapter";
 import { FilterBuilderAdapter } from "./FilterBuilderAdapter";
-import { FilterBuilderConfig } from "../FilterBuilderConfig";
 
 export class FilterBuilderAdapterFactory {
   static create<T extends object>(opts: FilterBuilderAdapterFactoryOptions<T>): FilterBuilderAdapter<T> {

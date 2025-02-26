@@ -129,17 +129,23 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
     };
   }
 
+  leftJoin(target: any, path: string, shortPath?: string): this;
   leftJoin(target: any, path: string, attributes?: string[]): this;
+  leftJoin(target: any, path: string, shortPath?: string, attributes?: string[]): this;
   leftJoin(target: Condition): this;
-  leftJoin(target: Condition | any, path?: string, attributes?: string[]) {
-    this.join(false, target, path, attributes);
+  leftJoin(target: Condition | any, path?: string, arg1?: unknown, arg2?: unknown): this {
+    if (arg1 && Array.isArray(arg1)) this.join(false, target, path, arg1 as string[]);
+    else this.join(false, target, path, arg2 as string[], arg1 as string);
     return this;
   }
 
+  innerJoin(target: any, path: string, shortPath?: string): this;
   innerJoin(target: any, path: string, attributes?: string[]): this;
+  innerJoin(target: any, path: string, shortPath?: string, attributes?: string[]): this;
   innerJoin(target: Condition): this;
-  innerJoin(target: any, path?: string, attributes?: string[]) {
-    this.join(true, target, path, attributes);
+  innerJoin(target: any, arg1?: unknown, arg2?: unknown, arg3?: unknown): this {
+    if (arg2 && Array.isArray(arg2)) this.join(false, target, arg1 as string, arg2 as string[]);
+    else this.join(true, target, arg1 as string, arg3 as string[], arg2 as string);
     return this;
   }
 
@@ -151,7 +157,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
    * @param path - path data of result filter.
    * @param attributes - attributes in table join.
    */
-  private join(required: boolean, target: Condition | any, path?: string, attributes?: string[]) {
+  private join(required: boolean, target: Condition | any, path?: string, attributes?: string[], shortPath?: string) {
     let subFilter: SubFilter<T> | undefined = undefined;
     if (target instanceof Condition)
       subFilter = target.build({
@@ -160,7 +166,7 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
         config: this.config,
       });
     else if (path) {
-      subFilter = new SubFilter(this.queryData, this.adapter, path, target, this.config);
+      subFilter = new SubFilter(this.queryData, this.adapter, path, target, shortPath, this.config);
       if (attributes) subFilter.attributes(attributes);
     }
     if (!subFilter) throw new Error("Build SubFilter is fail.");
@@ -203,16 +209,17 @@ export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
   }
 
   logicalCondition(operator: LogicalOperator, conditions: Condition[]): this {
-    this.adapter.handleLogicalOperator(
-      operator,
-      conditions.map((condition) =>
-        condition.build({
-          queryData: this.queryData,
-          adapter: this.adapter,
-          config: this.config,
-        }),
-      ),
-    );
+    const _conditions = conditions.reduce((init, val) => {
+      const condition = val.build({
+        queryData: this.queryData,
+        adapter: this.adapter,
+        config: this.config,
+      });
+      if (condition.conditionData.conditions.length > 0) init.push(condition);
+      return init;
+    }, [] as SubFilter<T>[]);
+
+    this.adapter.handleLogicalOperator(operator, _conditions);
 
     return this;
   }

@@ -8,12 +8,20 @@ export class SubFilter<T> extends BaseFilter {
   conditionData: JoinData;
   private readonly adapter: FilterBuilderAdapter<T>;
 
-  constructor(queryData: QueryData, adapter: FilterBuilderAdapter<T>, path?: string, target?: any, config?: FilterBuilderConfig) {
+  constructor(
+    queryData: QueryData,
+    adapter: FilterBuilderAdapter<T>,
+    path?: string,
+    target?: any,
+    shortPath?: string,
+    config?: FilterBuilderConfig,
+  ) {
     super(queryData, config);
     this.conditionData = {
       path: path ?? "",
       target,
       conditions: [],
+      shortPath,
     };
     this.adapter = adapter;
 
