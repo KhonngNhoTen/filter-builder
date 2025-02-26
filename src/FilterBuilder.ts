@@ -4,6 +4,7 @@ import {
   InstanceTypeOf,
   LogicalOperator,
   OperatorEnum,
+  Pagination,
   QueryData,
   ResultFilter,
   ResultFilterTransformFuncs,
@@ -16,18 +17,21 @@ import { SubFilter } from "./SubFilter";
 export class FilterBuilder<U, T extends InstanceTypeOf<U>> extends BaseFilter {
   private adapter: FilterBuilderAdapter<T>;
   private core: U;
+  private pagination: Pagination;
 
   constructor(mainTarget: U, queryData: QueryData, aliasTableName?: string) {
     super(queryData);
     const type = this.config.type;
     this.core = mainTarget;
+    this.pagination = this.config.runPaginationHook(queryData);
+
     this.adapter = this.config.factoryAdapter.create({
       config: this.config,
       mainTarget: mainTarget as any,
       type,
       aliasTableName,
-      page: queryData?.page ?? 1,
-      limit: queryData.limit,
+      page: this.pagination?.page ?? 1,
+      limit: this.pagination.limit,
     });
   }
 

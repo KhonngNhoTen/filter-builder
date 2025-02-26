@@ -83,4 +83,9 @@ export class FilterBuilderConfig {
     if (this.hooks?.beforeJoinHook) joinData = this.hooks?.beforeJoinHook(joinData);
     return joinData;
   }
+
+  runPaginationHook(query: any) {
+    if (this.hooks?.paginationHook) query = this.hooks?.paginationHook(query);
+    return query;
+  }
 }

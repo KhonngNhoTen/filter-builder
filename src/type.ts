@@ -58,12 +58,15 @@ export type BeforeGroupHook = (columnName: string) => string;
 
 export type BeforeJoinHook = (joinData: JoinData) => JoinData;
 
+export type PaginateHook = (query: any) => Pagination;
+
 export type FilterBuilderConfigHooks = {
   beforeEachCondition?: BeforeEachConditionHook[];
   beforeOrder?: BeforeOrderHook[];
   beforeGroup?: BeforeGroupHook;
   beforeJoinHook?: BeforeJoinHook;
   getColumnName?: GetColumnNameHook;
+  paginationHook?: PaginateHook;
 };
 
 export type FilterConfigOpts = {
@@ -92,4 +95,9 @@ export type ConditionData = {
   operator: OperatorEnum;
   params: any | any[];
   path?: string;
+};
+
+export type Pagination = {
+  page: number;
+  limit: number;
 };
